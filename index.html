@@ -199,6 +199,8 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
           <li>“Juliet, quanto sobrou este mês?”</li>
           <li>“Juliet, quanto gastei com gasolina?”</li>
           <li>“Juliet, resumo de março.”</li>
+          <li>“Juliet, gastei 35 com gasolina ontem.”</li>
+          <li>“Juliet, recebi salário dia 5.”</li>
           <li>“Juliet, o que você faz?”</li>
         </ul>
         <p class="note">Esta versão roda no próprio navegador e reconhece comandos de finanças, tarefas e perguntas simples. A leitura de voz pode usar o serviço de reconhecimento do navegador e exigir internet; os registros ficam guardados localmente neste navegador. No modo conversa, o microfone fica aberto enquanto a página estiver aberta.</p>
@@ -423,6 +425,9 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
     if (!('speechSynthesis' in window)) return null;
     const all = speechSynthesis.getVoices();
     const pt = all.filter(v => /^pt/i.test(v.lang));
+    const pref = pt.filter(v => /^pt[-_]BR/i.test(v.lang));
+    const pool = pref.length ? pref : pt;
+    voice = pool.find(v => MALE_HINTS.test(v.name)) || null;
     $('sideVoice').textContent = voice ? voice.name : 'Padrão do aparelho';
     return voice;
   }
@@ -804,7 +809,7 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
     return raw
       .replace(/\d[\d.,]*/g, ' ')
       .replace(/r\$/gi, ' ')
-      .replace(/\b(reais?|gastei|gastar|recebi|anota|anotar|investi|registra|registrar|de|com|no|na|do|da)\b/gi, ' ')
+      .replace(/\b(reais?|gastei|gastar|recebi|anota|anotar|investi|registra|registrar|de|com|no|na|do|da|dia|hoje|ontem|anteontem|amanha|janeiro|fevereiro|marco|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/gi, ' ')
       .replace(/\s+/g, ' ')
       .trim()
       .slice(0, 60);
@@ -839,6 +844,51 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
       return;
     }
     speak('Ainda não sei responder isso. Posso registrar lançamentos, mostrar saldo, resumos, categorias e tarefas. Para conversas mais abertas, ainda não há um modelo de IA conectado.');
+  }
+
+  // ----- Datas faladas ou digitadas -----
+  // Aceita: hoje, ontem, anteontem, amanhã, "dia 10", "dia 10 de março", "dia 10 de março de 2026", "10/03" e "10/03/2026".
+  // Sem data, usa a data de hoje.
+  function validDate(y, mo, d) {
+    const dt = new Date(y, mo, d, 12, 0, 0);
+    return dt.getDate() === d ? dt : null;
+  }
+
+  function dateFrom(s) {
+    const now = new Date();
+    const base = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+    const shift = n => { const d = new Date(base); d.setDate(d.getDate() + n); return d; };
+    if (/\banteontem\b/.test(s)) return shift(-2);
+    if (/\bontem\b/.test(s)) return shift(-1);
+    if (/\bhoje\b/.test(s)) return base;
+    if (/\bamanha\b/.test(s)) return shift(1);
+
+    let m = s.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
+    if (m) {
+      let y = m[3] ? Number(m[3]) : now.getFullYear();
+      if (y < 100) y += 2000;
+      return validDate(y, Number(m[2]) - 1, Number(m[1]));
+    }
+
+    m = s.match(/\bdia (\d{1,2})(?: de ([a-z]+))?(?: de (\d{4}))?\b/);
+    if (m) {
+      const day = Number(m[1]);
+      const mi = m[2] ? MESES.indexOf(m[2]) : -1;
+      const year = m[3] ? Number(m[3]) : now.getFullYear();
+      if (mi >= 0) return validDate(year, mi, day);
+      // Sem mês: usa o mês atual. Se o dia ainda não chegou, usa o mês anterior.
+      let d = validDate(year, now.getMonth(), day);
+      if (d && d > base) d = validDate(year, now.getMonth() - 1, day);
+      return d;
+    }
+    return null;
+  }
+
+  // Tira datas do texto antes de procurar o valor, para "dia 10" não virar R$ 10
+  function stripDates(s) {
+    return s
+      .replace(/\bdia \d{1,2}(?: de [a-z]+)?(?: de \d{4})?\b/g, ' ')
+      .replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, ' ');
   }
 
   function handle(raw) {
@@ -925,7 +975,8 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
       return;
     }
 
-    const amount = amountFrom(s);
+    const when = dateFrom(s);
+    const amount = amountFrom(stripDates(s));
     if (!amount) {
       speak('Não consegui identificar o valor. Tente, por exemplo: gastei 35 reais com gasolina.');
       return;
@@ -936,11 +987,12 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
     else if (/investi|investimento|apliquei/.test(s)) type = 'investimento';
 
     const category = categoryFrom(s, type);
-    data.push({ id: Date.now() + Math.random(), type, amount, category, desc: descFrom(raw), date: new Date().toISOString() });
+    data.push({ id: Date.now() + Math.random(), type, amount, category, desc: descFrom(raw), date: (when || new Date()).toISOString() });
     if (save()) render();
 
     const verb = type === 'entrada' ? 'Entrada registrada' : type === 'investimento' ? 'Investimento registrado' : 'Despesa registrada';
-    speak(`${verb}: ${money(amount)} em ${category}. Saldo registrado agora: ${money(balanceOf(sumBy(data)))}.`);
+    const diaTxt = when ? ' com data de ' + when.toLocaleDateString('pt-BR') : '';
+    speak(`${verb}${diaTxt}: ${money(amount)} em ${category}. Saldo registrado agora: ${money(balanceOf(sumBy(data)))}.`);
   }
 
   // Pede permissão de microfone quando necessário. O navegador mostra a confirmação;
