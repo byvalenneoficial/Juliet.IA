@@ -157,6 +157,10 @@ p{color:var(--muted);line-height:1.55}
 .task input[type=checkbox]{width:18px;height:18px;accent-color:#36d9ff;flex:none}
 .task-list{margin-top:6px}
 .ta{width:100%;background:#041522;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:inherit;resize:vertical}
+.log-item{padding:10px 0;border-bottom:1px solid #18384b;font-size:.86rem}
+.log-time{font-size:.72rem;color:#68899c}
+.log-cmd{color:var(--text);margin-top:3px;overflow-wrap:anywhere}
+.log-reply{color:var(--muted);margin-top:3px;overflow-wrap:anywhere}
 .foot{font-size:.76rem;color:#68899c;text-align:center;margin-top:20px;letter-spacing:.3px}
 button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
 
@@ -370,6 +374,14 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
 
       <section class="panel">
         <div class="section-title">
+          <h2>Histórico com a Juliet</h2>
+          <button id="logClear" class="smallbtn" type="button">Limpar histórico</button>
+        </div>
+        <div id="logList" class="log-list"></div>
+      </section>
+
+      <section class="panel">
+        <div class="section-title">
           <h2>Movimentações ao vivo</h2>
           <button class="smallbtn" id="export">Exportar backup</button>
         </div>
@@ -438,6 +450,7 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
 
   const speak = text => {
     $('status').textContent = text;
+    noteReply(text);
     if (!('speechSynthesis' in window)) { setState('idle'); return; }
     speechSynthesis.cancel();
     if (!voice) pickVoice();
@@ -809,7 +822,7 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
     return raw
       .replace(/\d[\d.,]*/g, ' ')
       .replace(/r\$/gi, ' ')
-      .replace(/\b(reais?|gastei|gastar|recebi|anota|anotar|investi|registra|registrar|de|com|no|na|do|da|dia|hoje|ontem|anteontem|amanha|janeiro|fevereiro|marco|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/gi, ' ')
+      .replace(/\b(reais?|gastei|gastar|recebi|anota|anotar|investi|registra|registrar|de|com|no|na|do|da|dia|em|hoje|ontem|anteontem|amanha|janeiro|fevereiro|marco|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/gi, ' ')
       .replace(/\s+/g, ' ')
       .trim()
       .slice(0, 60);
@@ -844,6 +857,108 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
       return;
     }
     speak('Ainda não sei responder isso. Posso registrar lançamentos, mostrar saldo, resumos, categorias e tarefas. Para conversas mais abertas, ainda não há um modelo de IA conectado.');
+  }
+
+  // ----- Perguntas pendentes e histórico de conversas -----
+  let pending = null;   // registro esperando resposta: { step: 'tipo' | 'categoria', ... }
+  let convoLog = [];
+  try {
+    const l = JSON.parse(localStorage.getItem('juliet_log') || '[]');
+    convoLog = Array.isArray(l) ? l : [];
+  } catch (e) { convoLog = []; }
+
+  function saveLog() {
+    try { localStorage.setItem('juliet_log', JSON.stringify(convoLog.slice(-300))); } catch (e) { /* ignora */ }
+  }
+
+  function logCmd(cmd) {
+    convoLog.push({ t: new Date().toISOString(), cmd, reply: '' });
+    if (convoLog.length > 300) convoLog.splice(0, convoLog.length - 300);
+    saveLog();
+    renderLog();
+  }
+
+  function noteReply(text) {
+    if (!convoLog.length) return;
+    const last = convoLog[convoLog.length - 1];
+    if (!last.reply) {
+      last.reply = text;
+      saveLog();
+      renderLog();
+    }
+  }
+
+  function renderLog() {
+    const box = $('logList');
+    if (!box) return;
+    box.innerHTML = '';
+    const items = convoLog.slice(-20).reverse();
+    if (!items.length) {
+      box.innerHTML = '<div class="empty">Ainda não há conversas registradas.</div>';
+      return;
+    }
+    items.forEach(it => {
+      const row = document.createElement('div');
+      row.className = 'log-item';
+      const time = document.createElement('div');
+      time.className = 'log-time';
+      time.textContent = new Date(it.t).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      const cmd = document.createElement('div');
+      cmd.className = 'log-cmd';
+      cmd.textContent = 'Você: “' + it.cmd + '”';
+      const rep = document.createElement('div');
+      rep.className = 'log-reply';
+      rep.textContent = 'Juliet: ' + (it.reply || '…');
+      row.append(time, cmd, rep);
+      box.appendChild(row);
+    });
+  }
+
+  function finishEntry(e) {
+    data.push({
+      id: Date.now() + Math.random(),
+      type: e.type,
+      amount: e.amount,
+      category: e.category,
+      desc: e.desc || '',
+      date: (e.when || new Date()).toISOString()
+    });
+    pending = null;
+    if (save()) render();
+    const diaTxt = e.when ? ' em ' + e.when.toLocaleDateString('pt-BR') : '';
+    const verb = e.type === 'entrada' ? 'Entrada registrada' : e.type === 'investimento' ? 'Investimento registrado' : 'Despesa registrada';
+    speak(`${verb}${diaTxt}: ${money(e.amount)}, tipo ${e.category}. Saldo registrado agora: ${money(balanceOf(sumBy(data)))}.`);
+  }
+
+  // Resposta à pergunta pendente (tipo do registro ou categoria)
+  function answerPending(raw, s) {
+    $('transcript').textContent = 'Você respondeu: “' + raw + '”';
+    if (/^(cancela|cancelar|esquece|deixa pra la|para)\b/.test(s)) {
+      pending = null;
+      speak('Registro cancelado.');
+      return;
+    }
+    if (pending.step === 'tipo') {
+      const t = /entrada|receita|recebi/.test(s) ? 'entrada'
+        : /investi|investimento/.test(s) ? 'investimento'
+        : /saida|despesa|gasto|paguei/.test(s) ? 'despesa' : null;
+      if (!t) { speak('Não entendi. Diga entrada, saída ou investimento.'); return; }
+      pending.type = t;
+      const cat = categoryFrom(s, t);
+      if (t === 'entrada' || cat === 'Outros') {
+        pending.step = 'categoria';
+        speak('Qual o tipo de registro?');
+        return;
+      }
+      finishEntry({ ...pending, category: cat });
+      return;
+    }
+    // Categoria: a resposta vira o tipo do registro
+    const ans = raw.trim().replace(/[.!?]+$/, '').slice(0, 60);
+    if (!ans) { speak('Qual o tipo de registro?'); return; }
+    let category = categoryFrom(norm(ans), pending.type);
+    if (category === 'Outros') category = cap(ans);
+    finishEntry({ ...pending, category, desc: ans });
   }
 
   // ----- Datas faladas ou digitadas -----
@@ -881,6 +996,8 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
       if (d && d > base) d = validDate(year, now.getMonth() - 1, day);
       return d;
     }
+    const mi = MESES.findIndex(name => new RegExp('\\b' + name + '\\b').test(s));
+    if (mi >= 0) return validDate(now.getFullYear(), mi, mi === now.getMonth() ? now.getDate() : 1);
     return null;
   }
 
@@ -893,6 +1010,8 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
 
   function handle(raw) {
     const s = norm(raw).trim();
+    logCmd(raw);
+    if (pending) { answerPending(raw, s); return; }
     $('transcript').textContent = 'Você disse: “' + raw + '”';
 
     if (/^(oi|ola|bom dia|boa tarde|boa noite)\b/.test(s)) {
@@ -982,17 +1101,24 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
       return;
     }
 
-    let type = 'despesa';
+    let type = null;
     if (/recebi|salario|entrou|ganhei|entrada|renda/.test(s)) type = 'entrada';
     else if (/investi|investimento|apliquei/.test(s)) type = 'investimento';
+    else if (/gastei|paguei|despesa|saida|gasto|compra|anota/.test(s)) type = 'despesa';
 
-    const category = categoryFrom(s, type);
-    data.push({ id: Date.now() + Math.random(), type, amount, category, desc: descFrom(raw), date: (when || new Date()).toISOString() });
-    if (save()) render();
-
-    const verb = type === 'entrada' ? 'Entrada registrada' : type === 'investimento' ? 'Investimento registrado' : 'Despesa registrada';
-    const diaTxt = when ? ' com data de ' + when.toLocaleDateString('pt-BR') : '';
-    speak(`${verb}${diaTxt}: ${money(amount)} em ${category}. Saldo registrado agora: ${money(balanceOf(sumBy(data)))}.`);
+    const desc0 = descFrom(raw);
+    if (!type) {
+      pending = { step: 'tipo', amount, when, desc: desc0 };
+      speak('É entrada, saída ou investimento?');
+      return;
+    }
+    const cat0 = categoryFrom(s, type);
+    if (type === 'entrada' || cat0 === 'Outros') {
+      pending = { step: 'categoria', type, amount, when, desc: desc0 };
+      speak('Qual o tipo de registro?');
+      return;
+    }
+    finishEntry({ type, amount, when, desc: desc0, category: cat0 });
   }
 
   // Pede permissão de microfone quando necessário. O navegador mostra a confirmação;
@@ -1077,7 +1203,7 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
   }
 
   function listenAgain() {
-    if (!convo || speaking || listening) return;
+    if ((!convo && !pending) || speaking || listening) return;
     setTimeout(startListening, 350);
   }
 
@@ -1213,6 +1339,14 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
   });
 
   $('profileText').value = profile;
+
+  $('logClear').dataset.confirm = 'Toque de novo para apagar';
+  $('logClear').addEventListener('click', () => armClick($('logClear'), () => {
+    convoLog = [];
+    saveLog();
+    renderLog();
+  }));
+  renderLog();
 
   const today = new Date();
   $('fDate').value = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
