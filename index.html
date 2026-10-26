@@ -130,6 +130,33 @@ p{color:var(--muted);line-height:1.55}
 .side-list li{color:var(--muted);margin:6px 0;line-height:1.5}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);margin-right:8px}
 .online{font-weight:650;color:#b9f6ff;text-align:center;font-size:.9rem;padding:6px 0}
+.table-wrap{overflow-x:auto;margin-top:10px}
+.year-table{width:100%;border-collapse:collapse;font-size:.88rem;min-width:420px}
+.year-table th,.year-table td{padding:9px 6px;text-align:right;border-bottom:1px solid #18384b}
+.year-table th:first-child,.year-table td:first-child{text-align:left}
+.year-table th{color:var(--muted);font-weight:600;font-size:.74rem;letter-spacing:.8px;text-transform:uppercase}
+.year-table tr.empty-month td{color:#5f7f92}
+.year-table tr.total td{font-weight:750;border-bottom:0;padding-top:12px}
+.sel,.wa-input{background:#041522;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit}
+.wa-input{flex:1;min-width:0;padding:10px 12px}
+.hint{font-size:.8rem;margin:10px 0 0}
+.oj-form{display:grid;gap:8px;margin-top:10px}
+.install{margin-top:12px}
+.install summary{cursor:pointer;color:#b9f6ff;font-weight:650;font-size:.9rem;padding:4px 0}
+.cmd{background:#041522;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:.78rem;overflow-x:auto;white-space:pre;color:#bdefff;margin:10px 0}
+.entry-form{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px}
+@media(min-width:650px){.entry-form{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.bar-row{display:grid;grid-template-columns:110px 1fr auto;gap:10px;align-items:center;margin:9px 0;font-size:.85rem}
+.bar-label{color:var(--muted);overflow-wrap:anywhere}
+.bar-track{height:10px;background:#0a2134;border-radius:999px;overflow:hidden;border:1px solid #18384b}
+.bar-fill{height:100%;background:linear-gradient(90deg,#36d9ff,#56ffd0)}
+.bar-val{font-weight:650;white-space:nowrap}
+.task{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #18384b}
+.task span{flex:1;min-width:0;overflow-wrap:anywhere}
+.task.done span{text-decoration:line-through;color:var(--muted)}
+.task input[type=checkbox]{width:18px;height:18px;accent-color:#36d9ff;flex:none}
+.task-list{margin-top:6px}
+.ta{width:100%;background:#041522;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:inherit;resize:vertical}
 .foot{font-size:.76rem;color:#68899c;text-align:center;margin-top:20px;letter-spacing:.3px}
 button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
 
@@ -171,9 +198,10 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
           <li>“Juliet, investi 100 reais.”</li>
           <li>“Juliet, quanto sobrou este mês?”</li>
           <li>“Juliet, quanto gastei com gasolina?”</li>
+          <li>“Juliet, resumo de março.”</li>
           <li>“Juliet, o que você faz?”</li>
         </ul>
-        <p class="note">Versão inicial: reconhece comandos financeiros comuns no próprio site. Ainda não está conectada ao OpenJarvis nem a uma IA externa. A leitura de voz pode usar o serviço de reconhecimento do navegador e exigir internet; os registros ficam guardados localmente neste navegador. No modo conversa, o microfone fica aberto enquanto a página estiver aberta.</p>
+        <p class="note">Esta versão roda no próprio navegador e reconhece comandos de finanças, tarefas e perguntas simples. A leitura de voz pode usar o serviço de reconhecimento do navegador e exigir internet; os registros ficam guardados localmente neste navegador. No modo conversa, o microfone fica aberto enquanto a página estiver aberta.</p>
       </section>
     </aside>
 
@@ -286,6 +314,59 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
       </section>
 
       <section class="panel">
+        <div class="section-title"><h2>Novo lançamento</h2></div>
+        <form id="entryForm" class="entry-form">
+          <select id="fType" class="sel" aria-label="Tipo">
+            <option value="despesa">Despesa</option>
+            <option value="entrada">Entrada</option>
+            <option value="investimento">Investimento</option>
+          </select>
+          <select id="fCat" class="sel" aria-label="Categoria"></select>
+          <input id="fAmount" class="wa-input" type="number" step="0.01" min="0.01" placeholder="Valor (R$)" aria-label="Valor" required>
+          <input id="fDesc" class="wa-input" type="text" maxlength="60" placeholder="Descrição (opcional)" aria-label="Descrição">
+          <input id="fDate" class="wa-input" type="date" aria-label="Data">
+          <button class="action primary" type="submit">Lançar</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="section-title"><h2>Gastos por categoria • este mês</h2></div>
+        <div id="catBars"></div>
+      </section>
+
+      <section class="panel">
+        <div class="section-title"><h2>Tarefas e lembretes</h2><span class="tag" id="taskCount">0 pendentes</span></div>
+        <form id="taskForm" class="typed">
+          <input id="taskInput" type="text" maxlength="120" placeholder="Ex.: pagar conta de luz dia 10" aria-label="Nova tarefa">
+          <button class="action primary" type="submit">Adicionar</button>
+        </form>
+        <div id="taskList" class="task-list"></div>
+      </section>
+
+      <section class="panel">
+        <div class="section-title"><h2>Sobre você</h2><span class="tag">só neste aparelho</span></div>
+        <p class="hint">Escreva o que a Juliet deve saber sobre você: objetivos, rotina e projetos. Fica salvo só neste navegador, e não no arquivo publicado.</p>
+        <textarea id="profileText" class="ta" rows="5" maxlength="2000" aria-label="Sobre você"></textarea>
+        <div class="row" style="margin-top:10px"><button id="profileSave" class="action primary" type="button">Salvar</button></div>
+        <p id="profileStatus" class="hint" role="status"></p>
+      </section>
+
+      <section class="panel">
+        <div class="section-title">
+          <h2>Resumo por ano</h2>
+          <select id="yearSel" class="sel" aria-label="Escolher ano"></select>
+        </div>
+        <div class="table-wrap">
+          <table class="year-table">
+            <thead><tr><th>Mês</th><th>Entradas</th><th>Saídas</th><th>Saldo</th></tr></thead>
+            <tbody id="yearBody"></tbody>
+            <tfoot id="yearFoot"></tfoot>
+          </table>
+        </div>
+        <p class="hint">Saldo = entradas − saídas − investimentos. Diga, por exemplo, “Juliet, resumo de março” ou “Juliet, resumo de 2025”.</p>
+      </section>
+
+      <section class="panel">
         <div class="section-title">
           <h2>Movimentações ao vivo</h2>
           <button class="smallbtn" id="export">Exportar backup</button>
@@ -342,9 +423,6 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
     if (!('speechSynthesis' in window)) return null;
     const all = speechSynthesis.getVoices();
     const pt = all.filter(v => /^pt/i.test(v.lang));
-    const pref = pt.filter(v => /^pt[-_]BR/i.test(v.lang));
-    const pool = pref.length ? pref : pt;
-    voice = pool.find(v => MALE_HINTS.test(v.name)) || null;
     $('sideVoice').textContent = voice ? voice.name : 'Padrão do aparelho';
     return voice;
   }
@@ -426,6 +504,9 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
     $('sideMonth').textContent = money(balanceOf(sumBy(data.filter(x => sameMonth(x.date)))));
     $('sideCount').textContent = String(data.length);
     updateGauge();
+    renderYears();
+    renderCategories();
+    renderTasks();
 
     const box = $('entries');
     box.innerHTML = '';
@@ -444,7 +525,7 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
       desc.textContent = x.category;
       const meta = document.createElement('div');
       meta.className = 'meta';
-      meta.textContent = `${LABEL[x.type]} • ${new Date(x.date).toLocaleDateString('pt-BR')}`;
+      meta.textContent = `${x.desc ? x.desc + ' • ' : ''}${LABEL[x.type]} • ${new Date(x.date).toLocaleDateString('pt-BR')}`;
       left.append(desc, meta);
 
       const right = document.createElement('div');
@@ -499,17 +580,265 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
     return Number.isFinite(n) && n > 0 ? n : null;
   }
 
+  // Categorias operacionais. As palavras-chave são comparadas sem acento e como palavras inteiras.
+  const CATEGORIAS = {
+    despesa: {
+      'Alimentação': ['almoco','janta','jantar','mercado','supermercado','ifood','restaurante','lanche','padaria','cafe','comida','feira','hortifruti'],
+      'Transporte': ['gasolina','combustivel','uber','onibus','metro','estacionamento','pedagio','oficina','manutencao','moto','carro','passagem'],
+      'Moradia': ['aluguel','condominio','conta de luz','luz','agua','internet','iptu','gas de cozinha','botijao'],
+      'Saúde': ['farmacia','remedio','medico','consulta','plano de saude','academia','dentista','exame'],
+      'Lazer': ['cinema','bar','viagem','passeio','show','festa','jogo'],
+      'Educação': ['curso','livro','escola','faculdade'],
+      'Assinaturas': ['assinatura','netflix','spotify','streaming'],
+      'Compras': ['roupa','sapato','tenis','eletronico','presente','compra'],
+      'Trabalho': ['material','embalagem','equipamento','ferramenta','anuncio','marketing','hospedagem','dominio','taxa shopee'],
+      'Impostos e taxas': ['imposto','taxa','multa','das','mei','iss'],
+      'Dívidas': ['parcela','emprestimo','cartao','fatura','juros','divida']
+    },
+    entrada: {
+      'Salário': ['salario','holerite'],
+      'Serviços': ['servico','freelance','frete','entrega','corrida','bico','diaria'],
+      'Vendas': ['venda','vendi','shopee'],
+      'Rendimentos': ['rendimento','dividendo'],
+      'Reembolso': ['reembolso','devolucao','estorno']
+    },
+    investimento: {
+      'Renda fixa': ['tesouro','cdb','lci','lca','renda fixa'],
+      'Ações e fundos': ['acao','acoes','fundo','fii','etf'],
+      'Reserva': ['reserva','poupanca']
+    }
+  };
+
+  const hasKw = (s, kw) => new RegExp('\\b' + kw.replace(/\s+/g, '\\s+') + '\\b').test(s);
+
   function categoryFrom(s, type) {
-    const found = KNOWN.find(k => s.includes(k));
-    if (found) return NICE[found] || cap(found);
-    if (type === 'entrada') return 'Entrada';
-    if (type === 'investimento') return 'Investimento';
-    const m = s.match(/(?:com|de|do|da|no|na) (?:um |uma |o |a )?([a-z ]{2,30})/);
-    if (m) {
-      const c = m[1].trim().split(/\s+(?:hoje|ontem|agora)/)[0].trim();
-      if (c) return cap(c);
+    const table = CATEGORIAS[type] || CATEGORIAS.despesa;
+    for (const name of Object.keys(table)) {
+      if (table[name].some(kw => hasKw(s, kw))) return name;
     }
     return 'Outros';
+  }
+
+  const MESES = ['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const MESES_LABEL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+  function summarizeMonth(year, month) {
+    return sumBy(data.filter(x => {
+      const d = new Date(x.date);
+      return d.getFullYear() === year && d.getMonth() === month;
+    }));
+  }
+
+  function yearsWithData() {
+    const set = new Set([new Date().getFullYear(), ...data.map(x => new Date(x.date).getFullYear())]);
+    return [...set].sort((a, b) => b - a);
+  }
+
+  function yearRow(label, r, strong) {
+    const tr = document.createElement('tr');
+    if (strong) tr.className = 'total';
+    if (!strong && !r.income && !r.expenses && !r.investments) tr.classList.add('empty-month');
+    [label, money(r.income), money(r.expenses), money(balanceOf(r))].forEach((txt, i) => {
+      const td = document.createElement('td');
+      td.textContent = txt;
+      if (i === 1) td.className = 'positive';
+      if (i === 2) td.className = 'negative';
+      tr.appendChild(td);
+    });
+    return tr;
+  }
+
+  function renderYears() {
+    const sel = $('yearSel');
+    const years = yearsWithData();
+    const keep = Number(sel.value) || years[0];
+    sel.innerHTML = '';
+    years.forEach(y => {
+      const o = document.createElement('option');
+      o.value = y;
+      o.textContent = y;
+      sel.appendChild(o);
+    });
+    sel.value = years.includes(keep) ? keep : years[0];
+    const year = Number(sel.value);
+
+    const tbody = $('yearBody');
+    const tfoot = $('yearFoot');
+    tbody.innerHTML = '';
+    tfoot.innerHTML = '';
+    const total = { income: 0, expenses: 0, investments: 0 };
+    for (let m = 0; m < 12; m++) {
+      const r = summarizeMonth(year, m);
+      total.income += r.income;
+      total.expenses += r.expenses;
+      total.investments += r.investments;
+      tbody.appendChild(yearRow(MESES_LABEL[m], r, false));
+    }
+    tfoot.appendChild(yearRow('Total', total, true));
+  }
+
+  // Texto do resumo para enviar pelo WhatsApp
+  function yearText(year) {
+    const lines = ['Resumo ' + year + ' – Juliet'];
+    const total = { income: 0, expenses: 0, investments: 0 };
+    for (let m = 0; m < 12; m++) {
+      const r = summarizeMonth(year, m);
+      total.income += r.income;
+      total.expenses += r.expenses;
+      total.investments += r.investments;
+      lines.push(MESES_LABEL[m] + ': entradas ' + money(r.income) + ', saídas ' + money(r.expenses) + ', saldo ' + money(balanceOf(r)));
+    }
+    lines.push('Total: entradas ' + money(total.income) + ', saídas ' + money(total.expenses) + ', saldo ' + money(balanceOf(total)));
+    return lines.join('\n');
+  }
+
+  // ----- Tarefas, perfil e respostas locais -----
+  let tasks = [];
+  try {
+    const t = JSON.parse(localStorage.getItem('juliet_tasks') || '[]');
+    tasks = Array.isArray(t) ? t : [];
+  } catch (e) { tasks = []; }
+
+  let profile = '';
+  try { profile = localStorage.getItem('juliet_profile') || ''; } catch (e) { profile = ''; }
+
+  function saveTasks() {
+    try { localStorage.setItem('juliet_tasks', JSON.stringify(tasks)); } catch (e) { /* ignora */ }
+  }
+
+  function renderTasks() {
+    const box = $('taskList');
+    box.innerHTML = '';
+    const pend = tasks.filter(t => !t.done).length;
+    $('taskCount').textContent = pend + (pend === 1 ? ' pendente' : ' pendentes');
+    if (!tasks.length) {
+      box.innerHTML = '<div class="empty">Nenhuma tarefa. Diga “Juliet, lembra de…” ou digite acima.</div>';
+      return;
+    }
+    tasks.slice().sort((a, b) => Number(a.done) - Number(b.done)).forEach(t => {
+      const row = document.createElement('div');
+      row.className = 'task' + (t.done ? ' done' : '');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = !!t.done;
+      cb.setAttribute('aria-label', 'Marcar como feita: ' + t.text);
+      cb.addEventListener('change', () => { t.done = cb.checked; saveTasks(); renderTasks(); });
+      const span = document.createElement('span');
+      span.textContent = t.text;
+      const del = document.createElement('button');
+      del.className = 'icon';
+      del.textContent = '×';
+      del.dataset.confirm = 'Apagar?';
+      del.setAttribute('aria-label', 'Apagar tarefa');
+      del.addEventListener('click', () => armClick(del, () => {
+        tasks = tasks.filter(x => x !== t);
+        saveTasks();
+        renderTasks();
+      }));
+      row.append(cb, span, del);
+      box.appendChild(row);
+    });
+  }
+
+  function addTask(text) {
+    const clean = text.trim().slice(0, 120);
+    if (!clean) { speak('O que devo lembrar?'); return; }
+    tasks.push({ text: clean, done: false, created: new Date().toISOString() });
+    saveTasks();
+    renderTasks();
+    speak('Tarefa anotada: ' + clean + '.');
+  }
+
+  function categoryTotals() {
+    const totals = {};
+    data.filter(x => x.type === 'despesa' && sameMonth(x.date)).forEach(x => {
+      totals[x.category] = (totals[x.category] || 0) + x.amount;
+    });
+    return Object.entries(totals).sort((a, b) => b[1] - a[1]);
+  }
+
+  function renderCategories() {
+    const box = $('catBars');
+    box.innerHTML = '';
+    const entries = categoryTotals();
+    if (!entries.length) {
+      box.innerHTML = '<div class="empty">Nenhuma despesa neste mês.</div>';
+      return;
+    }
+    const max = entries[0][1];
+    entries.forEach(([name, val]) => {
+      const row = document.createElement('div');
+      row.className = 'bar-row';
+      const label = document.createElement('div');
+      label.className = 'bar-label';
+      label.textContent = name;
+      const track = document.createElement('div');
+      track.className = 'bar-track';
+      const fill = document.createElement('div');
+      fill.className = 'bar-fill';
+      fill.style.width = (val / max * 100).toFixed(1) + '%';
+      track.appendChild(fill);
+      const amt = document.createElement('div');
+      amt.className = 'bar-val';
+      amt.textContent = money(val);
+      row.append(label, track, amt);
+      box.appendChild(row);
+    });
+  }
+
+  function fillCatSelect() {
+    const type = $('fType').value;
+    const sel = $('fCat');
+    const names = Object.keys(CATEGORIAS[type] || {}).concat('Outros');
+    sel.innerHTML = '';
+    names.forEach(name => {
+      const o = document.createElement('option');
+      o.value = name;
+      o.textContent = name;
+      sel.appendChild(o);
+    });
+  }
+
+  // Descrição do lançamento a partir do texto falado (sem valores e palavras de comando)
+  function descFrom(raw) {
+    return raw
+      .replace(/\d[\d.,]*/g, ' ')
+      .replace(/r\$/gi, ' ')
+      .replace(/\b(reais?|gastei|gastar|recebi|anota|anotar|investi|registra|registrar|de|com|no|na|do|da)\b/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 60);
+  }
+
+  // Respostas que a Juliet dá sozinha, com os dados do próprio aparelho
+  function askBrain(raw, s) {
+    const now = new Date();
+    if (/maior despesa|onde (eu )?gasto mais|mais gast/.test(s)) {
+      const top = categoryTotals();
+      speak(top.length
+        ? `Este mês, sua maior categoria de gasto é ${top[0][0]}, com ${money(top[0][1])}.`
+        : 'Ainda não há despesas neste mês.');
+      return;
+    }
+    if (/como estou|situacao|como (ta|esta) (o )?(meu|minhas) (dinheiro|financas|contas)/.test(s)) {
+      const m = summarizeMonth(now.getFullYear(), now.getMonth());
+      const top = categoryTotals()[0];
+      speak(`Este mês: entradas ${money(m.income)}, saídas ${money(m.expenses)}, saldo ${money(balanceOf(m))}.` + (top ? ` Maior gasto: ${top[0]}.` : ''));
+      return;
+    }
+    if (/que horas|que hora/.test(s)) {
+      speak('Agora são ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '.');
+      return;
+    }
+    if (/que dia|dia de hoje|data de hoje/.test(s)) {
+      speak('Hoje é ' + now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + '.');
+      return;
+    }
+    if (/sobre mim|quem sou|o que voce sabe/.test(s)) {
+      speak(profile ? profile.slice(0, 300) : 'Você ainda não escreveu nada na seção Sobre você.');
+      return;
+    }
+    speak('Ainda não sei responder isso. Posso registrar lançamentos, mostrar saldo, resumos, categorias e tarefas. Para conversas mais abertas, ainda não há um modelo de IA conectado.');
   }
 
   function handle(raw) {
@@ -529,9 +858,43 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
       return;
     }
 
+    if (/\b(lembra de|lembrar de|me lembra de|me lembra|lembrete|tarefa)\b/.test(s)) {
+      const txt = raw.replace(/^.*?\b(me lembra de|me lembra|lembra de|lembrar de|lembrete de|lembrete|tarefa de|tarefa)\b\s*/i, '');
+      addTask(txt);
+      return;
+    }
+    if (/minhas tarefas|tarefas pendentes|o que tenho (pra|para) fazer/.test(s)) {
+      const p = tasks.filter(t => !t.done);
+      speak(p.length
+        ? `Você tem ${p.length} tarefa${p.length > 1 ? 's' : ''} pendente${p.length > 1 ? 's' : ''}: ` + p.slice(0, 3).map(t => t.text).join('; ') + '.'
+        : 'Você não tem tarefas pendentes.');
+      return;
+    }
+    if (/^(conclui|concluir|marca|marcar)\b/.test(s)) {
+      const alvo = norm(raw.replace(/^\S+\s*/, '')).replace(/\s+(como )?(feita|feito)$/, '').trim();
+      const t = tasks.find(x => !x.done && norm(x.text).includes(alvo));
+      if (t) { t.done = true; saveTasks(); renderTasks(); speak('Tarefa concluída: ' + t.text + '.'); }
+      else speak('Não encontrei essa tarefa.');
+      return;
+    }
+
     const monthOnly = /\bmes\b/.test(s);
     const scope = monthOnly ? data.filter(x => sameMonth(x.date)) : data;
     const scopeLabel = monthOnly ? ' neste mês' : '';
+
+    if (/resumo|relatorio|balanco|entradas e saidas/.test(s)) {
+      const yr = s.match(/\b(20\d{2})\b/);
+      const year = yr ? Number(yr[1]) : new Date().getFullYear();
+      const mi = MESES.findIndex(name => new RegExp('\\b' + name + '\\b').test(s));
+      if (mi >= 0) {
+        const r = summarizeMonth(year, mi);
+        speak(`Em ${MESES_LABEL[mi]} de ${year}: entradas ${money(r.income)}, saídas ${money(r.expenses)}, saldo ${money(balanceOf(r))}.`);
+      } else {
+        const t = sumBy(data.filter(x => new Date(x.date).getFullYear() === year));
+        speak(`Em ${year}: entradas ${money(t.income)}, saídas ${money(t.expenses)}, saldo ${money(balanceOf(t))}.`);
+      }
+      return;
+    }
 
     if (/saldo|quanto sobrou|quanto tenho|meu dinheiro/.test(s)) {
       const t = sumBy(scope);
@@ -556,6 +919,12 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
       return;
     }
 
+    const isQuestion = /\?$/.test(raw.trim()) || /^(quanto|qual|quais|como|quando|onde|por que|porque|o que|quem)\b/.test(s);
+    if (isQuestion && !/gastei|recebi|anota|investi|registr/.test(s)) {
+      askBrain(raw, s);
+      return;
+    }
+
     const amount = amountFrom(s);
     if (!amount) {
       speak('Não consegui identificar o valor. Tente, por exemplo: gastei 35 reais com gasolina.');
@@ -567,7 +936,7 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
     else if (/investi|investimento|apliquei/.test(s)) type = 'investimento';
 
     const category = categoryFrom(s, type);
-    data.push({ id: Date.now() + Math.random(), type, amount, category, date: new Date().toISOString() });
+    data.push({ id: Date.now() + Math.random(), type, amount, category, desc: descFrom(raw), date: new Date().toISOString() });
     if (save()) render();
 
     const verb = type === 'entrada' ? 'Entrada registrada' : type === 'investimento' ? 'Investimento registrado' : 'Despesa registrada';
@@ -753,6 +1122,49 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
     data = [];
     if (save()) { render(); speak('Dados apagados deste navegador.'); }
   }));
+
+  $('yearSel').addEventListener('change', renderYears);
+
+  $('fType').addEventListener('change', fillCatSelect);
+
+  $('entryForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const amount = Math.round(Number($('fAmount').value) * 100) / 100;
+    if (!(amount > 0)) { speak('Informe um valor maior que zero.'); return; }
+    const type = $('fType').value;
+    const category = $('fCat').value || 'Outros';
+    const desc = $('fDesc').value.trim().slice(0, 60);
+    const d = $('fDate').value;
+    const date = d ? new Date(d + 'T12:00:00').toISOString() : new Date().toISOString();
+    data.push({ id: Date.now() + Math.random(), type, amount, category, desc, date });
+    if (save()) {
+      render();
+      speak(`${LABEL[type]} lançada: ${money(amount)} em ${category}.`);
+    }
+    $('fAmount').value = '';
+    $('fDesc').value = '';
+  });
+
+  $('taskForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const v = $('taskInput').value;
+    if (!v.trim()) return;
+    addTask(v);
+    $('taskInput').value = '';
+  });
+
+  $('profileSave').addEventListener('click', () => {
+    profile = $('profileText').value.trim();
+    let ok = true;
+    try { localStorage.setItem('juliet_profile', profile); } catch (e) { ok = false; }
+    $('profileStatus').textContent = ok ? 'Salvo neste aparelho.' : 'Não consegui salvar neste navegador.';
+  });
+
+  $('profileText').value = profile;
+
+  const today = new Date();
+  $('fDate').value = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  fillCatSelect();
 
   // Saudação conforme a hora do dia (a fala automática costuma ser bloqueada pelo navegador)
   const h = new Date().getHours();
