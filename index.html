@@ -1,1523 +1,374 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#030911">
-<title>Juliet — Assistente financeiro por voz</title>
+<meta name="theme-color" content="#050b16">
+<title>Juliet.IA — Assistente Virtual</title>
 <style>
-:root{--bg:#030911;--line:rgba(51,211,255,.28);--text:#e8faff;--muted:#8ba9bb;--cyan:#36d9ff;--green:#56ffd0;--red:#ff718a;--gold:#ffcf78}
-*{box-sizing:border-box}
-body{margin:0;min-height:100vh;color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:radial-gradient(ellipse at 50% 0%,#0b2941 0%,#06111e 40%,#02060c 100%);overflow-x:hidden}
-body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.22;background-image:linear-gradient(rgba(54,217,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(54,217,255,.07) 1px,transparent 1px);background-size:34px 34px;mask-image:linear-gradient(to bottom,#000,transparent 85%)}
-main{position:relative;z-index:1;max-width:1320px;margin:auto;padding:16px 14px 44px}
-.layout{display:grid;grid-template-columns:1fr;gap:18px}
-.content{order:1;min-width:0}
-.sidebar{order:2;min-width:0}
-
-/* Cabeçalho */
-.top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;margin-bottom:18px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(135deg,rgba(8,28,45,.9),rgba(4,13,24,.9))}
-.logo{display:flex;align-items:center;gap:12px}
-.logo svg{width:44px;height:44px;flex:none}
-.brand{font-size:1.15rem;font-weight:800;letter-spacing:3px;color:var(--cyan);text-shadow:0 0 16px #36d9ff8c}
-.tag{font-size:.68rem;letter-spacing:1.2px;color:#9eefff;border:1px solid var(--line);background:#06203499;padding:7px 10px;border-radius:999px;text-transform:uppercase;white-space:nowrap}
-
-h1{font-size:clamp(1.6rem,5vw,2.8rem);line-height:1.05;letter-spacing:-1.2px;margin:6px 0 10px;font-weight:750}
-h1 em{font-style:normal;color:var(--cyan);text-shadow:0 0 22px #36d9ff4d}
-p{color:var(--muted);line-height:1.55}
-
-.panel{position:relative;background:linear-gradient(135deg,rgba(8,28,45,.9),rgba(4,13,24,.9));border:1px solid var(--line);border-radius:14px;padding:18px;margin:14px 0;box-shadow:inset 0 0 25px #0b6c8c12,0 12px 35px #0005;overflow:hidden}
-.panel:before{content:"";position:absolute;left:0;top:0;width:70px;height:2px;background:var(--cyan);box-shadow:0 0 16px var(--cyan)}
-
-/* Núcleo de IA (globo + rosto da Juliet) */
-.core-panel{text-align:center;padding:20px 14px 22px}
-.core-wrap{position:relative;width:250px;height:250px;margin:6px auto 0}
-.globe{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.globe .gspin{transform-box:view-box;transform-origin:150px 150px;animation:rotate 26s linear infinite}
-.globe .node{animation:breathe 3s ease-in-out infinite}
-.globe .node:nth-of-type(2n){animation-delay:.8s}
-@keyframes rotate{to{transform:rotate(360deg)}}
-@keyframes breathe{50%{opacity:.35}}
-.face-wrap{position:absolute;left:50%;top:50%;width:118px;height:136px;transform:translate(-50%,-50%)}
-.face-wrap svg{width:100%;height:100%;display:block;overflow:visible}
-.face-wrap .eyes{transform-box:view-box;transform-origin:100px 108px;animation:blink 5s infinite}
-.face-wrap .mouth{transform-box:view-box;transform-origin:100px 150px}
-.face-wrap.listening .mouth,.face-wrap.speaking .mouth{animation:talk .5s ease-in-out infinite}
-.face-wrap .aura{transform-box:view-box;transform-origin:100px 110px;animation:rotate 30s linear infinite}
-@keyframes blink{0%,46%,54%,100%{transform:scaleY(1)}50%{transform:scaleY(.1)}}
-@keyframes talk{50%{transform:scaleY(2.4)}}
-
-/* Anel de luz na base: muda conforme o estado */
-.light-ring{position:absolute;left:50%;bottom:-14px;width:200px;height:40px;transform:translateX(-50%);border-radius:50%;border:2px solid var(--cyan);box-shadow:0 0 16px #36d9ff99,inset 0 0 14px #36d9ff55;animation:idle-ring 3.2s ease-in-out infinite;pointer-events:none;transition:border-color .3s}
-@keyframes idle-ring{50%{opacity:.45}}
-.core-wrap[data-state=listening] .light-ring{border-color:#70eeff;animation:listen-ring .6s ease-in-out infinite}
-@keyframes listen-ring{50%{opacity:1;box-shadow:0 0 30px #70eeffcc,inset 0 0 24px #70eeff99}}
-.core-wrap[data-state=speaking] .light-ring{border-color:var(--green);animation:speak-ring .4s ease-in-out infinite}
-@keyframes speak-ring{50%{transform:translateX(-50%) scaleX(1.08);box-shadow:0 0 26px #56ffd0aa}}
-
-
-/* Núcleo de luz no centro (substitui o rosto) */
-.core-orb{position:absolute;left:50%;top:50%;width:64px;height:64px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 50% 50%,#f2feff 0%,#36d9ff 35%,#0b3a52 70%,transparent 75%);box-shadow:0 0 28px #36d9ff99,0 0 60px #36d9ff44;animation:orb-idle 3.2s ease-in-out infinite;transition:box-shadow .3s}
-@keyframes orb-idle{50%{opacity:.6}}
-.core-wrap[data-state=listening] .core-orb{background:radial-gradient(circle at 50% 50%,#ffffff 0%,#ff9fb0 35%,#551a32 70%,transparent 75%);box-shadow:0 0 34px #ff718acc,0 0 70px #ff718a55;animation:orb-idle .6s ease-in-out infinite}
-.core-wrap[data-state=speaking] .core-orb{animation:orb-speak .45s ease-in-out infinite}
-@keyframes orb-speak{50%{transform:translate(-50%,-50%) scale(1.15)}}
-
-.core-label{margin-top:26px;font-size:.8rem;letter-spacing:3px;text-transform:uppercase;color:#b9f6ff}
-.core-label small{display:block;color:var(--muted);letter-spacing:2px;font-size:.66rem;margin-top:3px}
-.status{font-weight:700;letter-spacing:.8px;font-size:.92rem;margin:12px 0 2px;color:#b9f6ff;min-height:1.4em}
-.transcript{min-height:28px;color:#f0fbff;margin-top:8px;overflow-wrap:anywhere;font-size:.95rem}
-
-/* Botão Falar com a Juliet */
-.talk{display:flex;align-items:center;justify-content:center;gap:12px;margin:14px auto 0;min-width:250px;padding:14px 22px;border-radius:999px;border:1px solid var(--cyan);background:linear-gradient(90deg,#071f30,#0b4a63 50%,#071f30);color:#eaffff;font:inherit;font-weight:750;letter-spacing:2.5px;text-transform:uppercase;font-size:.8rem;cursor:pointer;box-shadow:0 0 22px #36d9ff44;transition:.2s}
-.talk:hover{box-shadow:0 0 30px #36d9ff88;transform:translateY(-1px)}
-.talk .bars{display:flex;gap:3px;align-items:center;height:16px}
-.talk .bars i{width:3px;height:6px;background:var(--cyan);border-radius:2px}
-.talk.listening{border-color:var(--red);background:#551a32;box-shadow:0 0 24px #ff718a80}
-.talk.listening .bars i{background:#ffd0da;animation:bar .6s ease-in-out infinite}
-.talk.listening .bars i:nth-child(2){animation-delay:.15s}.talk.listening .bars i:nth-child(3){animation-delay:.3s}.talk.listening .bars i:nth-child(4){animation-delay:.45s}
-@keyframes bar{50%{height:16px}}
-
-.typed{display:flex;gap:8px;margin:16px auto 0;max-width:520px}
-.typed input{flex:1;min-width:0;background:#041522;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:8px;font:inherit}
-.typed input::placeholder{color:#5f7f92}
-.typed input:focus{outline:2px solid var(--cyan);outline-offset:2px}
-.command-list{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:14px}
-.chip{background:#071e30;color:#bdefff;border:1px solid #24516a;border-radius:999px;padding:8px 12px;cursor:pointer;font:inherit;font-size:.8rem}
-.chip:hover{border-color:var(--cyan);background:#0b3046}
-.chip[aria-pressed="true"]{border-color:var(--green);color:#dfffF5;background:#0b3d3a}
-
-/* Métricas */
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.metric{position:relative;background:linear-gradient(145deg,#0a2134d9,#07111eeb);border:1px solid var(--line);padding:15px 13px;border-radius:10px;overflow:hidden}
-.metric small{color:var(--muted);display:block;margin-bottom:9px;font-size:.72rem;letter-spacing:.8px;text-transform:uppercase}
-.metric strong{font-size:clamp(1.05rem,4vw,1.45rem);letter-spacing:-.5px;overflow-wrap:anywhere}
-.positive{color:var(--green)}.negative{color:var(--red)}
-
-/* Gráfico de gastos */
-.section-title{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-.section-title h2{font-size:.95rem;margin:0;letter-spacing:1.2px;text-transform:uppercase;color:#d4f7ff}
-.gauge{display:flex;align-items:center;gap:18px;margin-top:12px}
-.gauge svg{width:104px;height:104px;flex:none}
-.gauge .track{stroke:#18384b}
-.gauge .val{stroke:var(--cyan);transition:stroke-dashoffset .6s ease,stroke .3s}
-.gauge .val.over{stroke:var(--red)}
-.gauge p{margin:0;font-size:.92rem}
-
-/* Lista de movimentações */
-.smallbtn,.action{border:1px solid var(--line);background:#082438;color:#c8f6ff;padding:9px 12px;border-radius:8px;cursor:pointer;font:inherit;font-size:.83rem;font-weight:650}
-.action.primary{background:#0b5369;border-color:var(--cyan);color:#eaffff}
-.action.danger{color:var(--red);border-color:#85394b}
-.icon{background:none;border:1px solid #85394b;color:var(--red);border-radius:6px;min-width:30px;height:30px;padding:0 8px;cursor:pointer;font:inherit;font-size:.8rem;font-weight:650;line-height:1;flex:none;white-space:nowrap}
-.entry{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #18384b}
-.entry:last-child{border-bottom:0}
-.entry .desc{font-weight:650}
-.entry .meta{font-size:.78rem;color:var(--muted);margin-top:4px}
-.amount{white-space:nowrap;font-weight:750}
-.empty{color:var(--muted);padding:22px 0;text-align:center}
-.row{display:flex;gap:8px;flex-wrap:wrap}
-.entry .row{flex-wrap:nowrap;align-items:center}
-.note{font-size:.82rem;border-left:2px solid var(--gold);padding-left:11px;color:var(--muted)}
-
-/* Barra lateral */
-.side-panel{margin:0 0 14px}
-.side-block{padding:12px 0;border-bottom:1px solid #18384b}
-.side-block:last-child{border-bottom:0}
-.side-block small{display:block;color:var(--muted);font-size:.72rem;letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px}
-.side-block strong{font-size:1.1rem;overflow-wrap:anywhere}
-.side-title{font-size:.8rem;letter-spacing:1.3px;text-transform:uppercase;color:#9eefff;margin:0 0 4px}
-.side-list{padding-left:20px;margin:10px 0}
-.side-list li{color:var(--muted);margin:6px 0;line-height:1.5}
-.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);margin-right:8px}
-.online{font-weight:650;color:#b9f6ff;text-align:center;font-size:.9rem;padding:6px 0}
-.table-wrap{overflow-x:auto;margin-top:10px}
-.year-table{width:100%;border-collapse:collapse;font-size:.88rem;min-width:420px}
-.year-table th,.year-table td{padding:9px 6px;text-align:right;border-bottom:1px solid #18384b}
-.year-table th:first-child,.year-table td:first-child{text-align:left}
-.year-table th{color:var(--muted);font-weight:600;font-size:.74rem;letter-spacing:.8px;text-transform:uppercase}
-.year-table tr.empty-month td{color:#5f7f92}
-.year-table tr.total td{font-weight:750;border-bottom:0;padding-top:12px}
-.sel,.wa-input{background:#041522;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit}
-.wa-input{flex:1;min-width:0;padding:10px 12px}
-.hint{font-size:.8rem;margin:10px 0 0}
-.oj-form{display:grid;gap:8px;margin-top:10px}
-.install{margin-top:12px}
-.install summary{cursor:pointer;color:#b9f6ff;font-weight:650;font-size:.9rem;padding:4px 0}
-.cmd{background:#041522;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:.78rem;overflow-x:auto;white-space:pre;color:#bdefff;margin:10px 0}
-.entry-form{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px}
-@media(min-width:650px){.entry-form{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.bar-row{display:grid;grid-template-columns:110px 1fr auto;gap:10px;align-items:center;margin:9px 0;font-size:.85rem}
-.bar-label{color:var(--muted);overflow-wrap:anywhere}
-.bar-track{height:10px;background:#0a2134;border-radius:999px;overflow:hidden;border:1px solid #18384b}
-.bar-fill{height:100%;background:linear-gradient(90deg,#36d9ff,#56ffd0)}
-.bar-val{font-weight:650;white-space:nowrap}
-.task{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #18384b}
-.task span{flex:1;min-width:0;overflow-wrap:anywhere}
-.task.done span{text-decoration:line-through;color:var(--muted)}
-.task input[type=checkbox]{width:18px;height:18px;accent-color:#36d9ff;flex:none}
-.task-list{margin-top:6px}
-.ta{width:100%;background:#041522;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:inherit;resize:vertical}
-.log-item{padding:10px 0;border-bottom:1px solid #18384b;font-size:.86rem}
-.log-time{font-size:.72rem;color:#68899c}
-.log-cmd{color:var(--text);margin-top:3px;overflow-wrap:anywhere}
-.log-reply{color:var(--muted);margin-top:3px;overflow-wrap:anywhere}
-.meter{height:10px;background:#0a2134;border:1px solid #18384b;border-radius:999px;overflow:hidden;margin-top:12px}
-.meter-fill{height:100%;width:0;background:linear-gradient(90deg,#56ffd0,#36d9ff);transition:width .1s}
-.foot{font-size:.76rem;color:#68899c;text-align:center;margin-top:20px;letter-spacing:.3px}
-button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
-
-@media(min-width:650px){
-  .core-panel{padding:26px 22px 28px}
-  .grid{grid-template-columns:repeat(4,minmax(0,1fr))}
-  .metric{padding:18px}
+:root {
+  --bg:#030711;
+  --panel:#0b1930;
+  --cyan:#5ce7ff;
+  --text:#ecf8ff;
+  --muted:#93a9bf;
 }
-@media(min-width:1024px){
-  main{padding:26px 30px 48px}
-  .layout{grid-template-columns:290px minmax(0,1fr);gap:26px;align-items:start}
-  .sidebar{order:0;position:sticky;top:22px}
-  .content{order:1}
+* { box-sizing:border-box; }
+body {
+  margin:0;
+  min-height:100vh;
+  color:var(--text);
+  font-family:Arial,sans-serif;
+  background:radial-gradient(ellipse at top,#123052,#030711 70%);
 }
-@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+main { max-width:850px; margin:auto; padding:20px 14px 40px; }
+header {
+  display:flex; justify-content:space-between; align-items:center;
+  gap:10px; border-bottom:1px solid #24445e; padding-bottom:16px;
+}
+.brand { font-weight:bold; letter-spacing:3px; }
+.brand span,h1 span { color:var(--cyan); }
+.pill {
+  border:1px solid #24445e; border-radius:30px;
+  padding:8px 12px; font-size:12px; color:var(--cyan);
+}
+h1 { text-align:center; font-size:clamp(30px,7vw,48px); }
+.intro { text-align:center; color:var(--muted); line-height:1.6; }
+.panel {
+  margin-top:22px; padding:22px 15px; text-align:center;
+  background:rgba(8,22,42,.9); border:1px solid #24445e;
+  border-radius:20px; box-shadow:0 15px 45px #0005;
+}
+.orb {
+  width:125px; height:125px; margin:28px auto;
+  border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#d8ffff,#5ce7ff 8%,#176d9e 35%,#07152a 72%);
+  box-shadow:0 0 35px #5ce7ff80,0 0 80px #367eff35;
+  animation:glow 2s infinite alternate;
+}
+@keyframes glow {
+  to { transform:scale(1.06); box-shadow:0 0 50px #5ce7ff; }
+}
+#state { color:var(--cyan); font-size:13px; letter-spacing:2px; }
+#reply { line-height:1.6; min-height:45px; margin:18px auto; }
+.controls {
+  display:flex; justify-content:center; flex-wrap:wrap; gap:9px;
+}
+button,input { font:inherit; }
+button {
+  border:1px solid #315773; border-radius:10px;
+  background:#0b2944; color:var(--text);
+  padding:12px 14px; cursor:pointer;
+}
+button.primary { background:#07536c; border-color:var(--cyan); }
+button:hover { border-color:var(--cyan); }
+#mic { border-radius:50%; width:62px; height:62px; font-size:24px; }
+.inputrow { display:flex; gap:8px; margin-top:20px; }
+input {
+  flex:1; min-width:0; padding:13px;
+  border:1px solid #315773; border-radius:10px;
+  background:#030b17; color:white;
+}
+.info {
+  color:var(--muted); font-size:13px; line-height:1.7;
+  text-align:left; margin-top:22px;
+}
+footer { text-align:center; color:#7890a6; font-size:12px; margin-top:25px; }
+@media(max-width:430px) {
+  header { align-items:flex-start; }
+  .pill { font-size:10px; }
+  .inputrow { flex-direction:column; }
+}
 </style>
 </head>
 <body>
 <main>
-  <div class="layout">
+<header>
+  <div class="brand">JULIET<span>.IA</span></div>
+  <div class="pill">ASSISTENTE SOB COMANDO</div>
+</header>
 
-    <aside class="sidebar" aria-label="Informações da Juliet">
-      <section class="panel side-panel">
-        <div class="online"><span class="dot"></span>Juliet online</div>
-      </section>
+<h1>Sua assistente.<br><span>Seu comando.</span></h1>
+<p class="intro">
+  Chame meu nome para começar a conversar.
+  Estou aqui para ajudar quando você solicitar.
+</p>
 
-      <section class="panel side-panel">
-        <div class="side-block"><small>Saldo do mês</small><strong id="sideMonth">R$ 0,00</strong></div>
-        <div class="side-block"><small>Movimentações guardadas</small><strong id="sideCount">0</strong></div>
-        <div class="side-block"><small>Voz da Juliet</small><strong id="sideVoice">Padrão do aparelho</strong></div>
-      </section>
-
-      <section class="panel side-panel">
-        <p class="side-title">Como conversar</p>
-        <p>Ative o <strong>modo conversa</strong> e diga “Juliet” antes do pedido. Ou digite. Por exemplo:</p>
-        <ul class="side-list">
-          <li>“Juliet, anota 28 reais de almoço.”</li>
-          <li>“Juliet, recebi 500 reais de um serviço.”</li>
-          <li>“Juliet, investi 100 reais.”</li>
-          <li>“Juliet, quanto sobrou este mês?”</li>
-          <li>“Juliet, quanto gastei com gasolina?”</li>
-          <li>“Juliet, resumo de março.”</li>
-          <li>“Juliet, gastei 35 com gasolina ontem.”</li>
-          <li>“Juliet, recebi salário dia 5.”</li>
-          <li>“Juliet, o que você faz?”</li>
-        </ul>
-        <p class="note">Esta versão roda no próprio navegador e reconhece comandos de finanças, tarefas e perguntas simples. A leitura de voz pode usar o serviço de reconhecimento do navegador e exigir internet; os registros ficam guardados localmente neste navegador. No modo conversa, o microfone fica aberto enquanto a página estiver aberta.</p>
-      </section>
-    </aside>
-
-    <div class="content">
-      <header class="top">
-        <div class="logo">
-          <svg viewBox="0 0 100 100" aria-hidden="true">
-            <defs>
-              <radialGradient id="hcore" cx="50%" cy="50%" r="50%">
-                <stop offset="0" stop-color="#f2feff"/>
-                <stop offset=".45" stop-color="#36d9ff"/>
-                <stop offset="1" stop-color="#0b3a52" stop-opacity="0"/>
-              </radialGradient>
-            </defs>
-            <circle cx="50" cy="50" r="46" fill="none" stroke="#36d9ff" stroke-opacity=".45" stroke-width="2"/>
-            <circle cx="50" cy="50" r="36" fill="none" stroke="#36d9ff" stroke-opacity=".7" stroke-width="3" stroke-dasharray="20 6"/>
-            <circle cx="50" cy="50" r="22" fill="url(#hcore)"/>
-            <circle cx="50" cy="50" r="6" fill="#f2feff"/>
-          </svg>
-          <div class="brand">JULIET</div>
-        </div>
-        <div class="tag">Privada • salva no celular</div>
-      </header>
-
-      <h1>Seu dinheiro.<br><em>Sob seu comando.</em></h1>
-      <p>Fale naturalmente ou digite. A Juliet registra seus movimentos e responde em voz alta, sem precisar preencher formulários.</p>
-
-      <section class="panel core-panel">
-        <div class="tag">Núcleo de IA • Interface de voz</div>
-
-        <div id="stage" class="core-wrap" data-state="idle">
-          <svg class="globe" viewBox="0 0 300 300" aria-hidden="true">
-            <defs>
-              <radialGradient id="gsphere" cx="50%" cy="45%" r="55%">
-                <stop offset="0" stop-color="#0d3d57" stop-opacity=".6"/>
-                <stop offset="1" stop-color="#02080f" stop-opacity="0"/>
-              </radialGradient>
-            </defs>
-            <circle cx="150" cy="150" r="140" fill="none" stroke="#36d9ff" stroke-opacity=".25" stroke-dasharray="3 7"/>
-            <circle cx="150" cy="150" r="128" fill="url(#gsphere)" stroke="#36d9ff" stroke-opacity=".45" stroke-width="1.2"/>
-            <g class="gspin" fill="none" stroke="#36d9ff" stroke-opacity=".28" stroke-width="1">
-              <ellipse cx="150" cy="150" rx="50" ry="128"/>
-              <ellipse cx="150" cy="150" rx="50" ry="128" transform="rotate(30 150 150)"/>
-              <ellipse cx="150" cy="150" rx="50" ry="128" transform="rotate(60 150 150)"/>
-              <ellipse cx="150" cy="150" rx="50" ry="128" transform="rotate(90 150 150)"/>
-              <ellipse cx="150" cy="150" rx="50" ry="128" transform="rotate(120 150 150)"/>
-              <ellipse cx="150" cy="150" rx="50" ry="128" transform="rotate(150 150 150)"/>
-              <ellipse cx="150" cy="70" rx="100" ry="12"/>
-              <ellipse cx="150" cy="110" rx="122" ry="14"/>
-              <ellipse cx="150" cy="150" rx="128" ry="16"/>
-              <ellipse cx="150" cy="190" rx="122" ry="14"/>
-              <ellipse cx="150" cy="230" rx="100" ry="12"/>
-            </g>
-            <g fill="#a5f5ff">
-              <circle class="node" cx="95" cy="110" r="2.5"/>
-              <circle class="node" cx="205" cy="95" r="2"/>
-              <circle class="node" cx="230" cy="190" r="2.5"/>
-              <circle class="node" cx="120" cy="222" r="2"/>
-              <circle class="node" cx="180" cy="240" r="2.5"/>
-              <circle class="node" cx="70" cy="170" r="2"/>
-            </g>
-          </svg>
-
-          <div class="core-orb" aria-hidden="true"></div>
-
-          <div class="light-ring" aria-hidden="true"></div>
-        </div>
-
-        <div class="core-label">Juliet<small>AI CORE</small></div>
-        <div id="status" class="status" role="status" aria-live="polite">Toque no botão para falar</div>
-        <div id="transcript" class="transcript">Ex.: “Juliet, gastei 35 reais com gasolina.”</div>
-
-        <button id="mic" class="talk" aria-label="Falar com a Juliet">
-          <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-          Falar com a Juliet
-          <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-        </button>
-
-        <form id="form" class="typed">
-          <input id="typed" type="text" placeholder="Ou digite: gastei 35 com gasolina" autocomplete="off" aria-label="Digite uma movimentação">
-          <button class="action primary" type="submit">Registrar</button>
-        </form>
-
-        <div class="command-list">
-          <button id="wake" class="chip" aria-pressed="false">Modo conversa: desligado</button>
-          <button class="chip" data-say="Qual é meu saldo?">“Qual é meu saldo?”</button>
-          <button class="chip" data-say="Gastei 35 reais com gasolina">“Gastei R$ 35 com gasolina”</button>
-          <button class="chip" data-say="Recebi 2449 reais de salário">“Recebi meu salário”</button>
-          <button class="chip" data-say="Quanto gastei este mês?">“Quanto gastei este mês?”</button>
-        </div>
-      </section>
-
-      <section class="grid">
-        <div class="metric"><small>Saldo registrado</small><strong id="balance">R$ 0,00</strong></div>
-        <div class="metric"><small>Entradas</small><strong id="income" class="positive">R$ 0,00</strong></div>
-        <div class="metric"><small>Despesas</small><strong id="expenses" class="negative">R$ 0,00</strong></div>
-        <div class="metric"><small>Investimentos</small><strong id="investments">R$ 0,00</strong></div>
-      </section>
-
-      <section class="panel">
-        <div class="section-title"><h2>Gastos sobre entradas • este mês</h2></div>
-        <div class="gauge">
-          <svg viewBox="0 0 100 100" aria-hidden="true">
-            <circle class="track" cx="50" cy="50" r="40" fill="none" stroke-width="8"/>
-            <circle id="gaugeVal" class="val" cx="50" cy="50" r="40" fill="none" stroke-width="8" stroke-linecap="round" stroke-dasharray="251.2" stroke-dashoffset="251.2" transform="rotate(-90 50 50)"/>
-            <text id="gaugePct" x="50" y="56" text-anchor="middle" fill="#e8faff" font-size="17" font-weight="700">0%</text>
-          </svg>
-          <p id="gaugeText">Registre entradas e despesas para ver o percentual.</p>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="section-title"><h2>Novo lançamento</h2></div>
-        <form id="entryForm" class="entry-form">
-          <select id="fType" class="sel" aria-label="Tipo">
-            <option value="despesa">Despesa</option>
-            <option value="entrada">Entrada</option>
-            <option value="investimento">Investimento</option>
-          </select>
-          <select id="fCat" class="sel" aria-label="Categoria"></select>
-          <input id="fAmount" class="wa-input" type="number" step="0.01" min="0.01" placeholder="Valor (R$)" aria-label="Valor" required>
-          <input id="fDesc" class="wa-input" type="text" maxlength="60" placeholder="Descrição (opcional)" aria-label="Descrição">
-          <input id="fDate" class="wa-input" type="date" aria-label="Data">
-          <button class="action primary" type="submit">Lançar</button>
-        </form>
-      </section>
-
-      <section class="panel">
-        <div class="section-title"><h2>Gastos por categoria • este mês</h2></div>
-        <div id="catBars"></div>
-      </section>
-
-      <section class="panel">
-        <div class="section-title"><h2>Tarefas e lembretes</h2><span class="tag" id="taskCount">0 pendentes</span></div>
-        <form id="taskForm" class="typed">
-          <input id="taskInput" type="text" maxlength="120" placeholder="Ex.: pagar conta de luz dia 10" aria-label="Nova tarefa">
-          <button class="action primary" type="submit">Adicionar</button>
-        </form>
-        <div id="taskList" class="task-list"></div>
-      </section>
-
-      <section class="panel">
-        <div class="section-title"><h2>Sobre você</h2><span class="tag">só neste aparelho</span></div>
-        <p class="hint">Escreva o que a Juliet deve saber sobre você: objetivos, rotina e projetos. Fica salvo só neste navegador, e não no arquivo publicado.</p>
-        <textarea id="profileText" class="ta" rows="5" maxlength="2000" aria-label="Sobre você"></textarea>
-        <div class="row" style="margin-top:10px"><button id="profileSave" class="action primary" type="button">Salvar</button></div>
-        <p id="profileStatus" class="hint" role="status"></p>
-      </section>
-
-      <section class="panel">
-        <div class="section-title">
-          <h2>Resumo por ano</h2>
-          <select id="yearSel" class="sel" aria-label="Escolher ano"></select>
-        </div>
-        <div class="table-wrap">
-          <table class="year-table">
-            <thead><tr><th>Mês</th><th>Entradas</th><th>Saídas</th><th>Saldo</th></tr></thead>
-            <tbody id="yearBody"></tbody>
-            <tfoot id="yearFoot"></tfoot>
-          </table>
-        </div>
-        <p class="hint">Saldo = entradas − saídas − investimentos. Diga, por exemplo, “Juliet, resumo de março” ou “Juliet, resumo de 2025”.</p>
-      </section>
-
-      <section class="panel">
-        <div class="section-title"><h2>Calibração da escuta</h2><span class="tag" id="listenVal">2,0 s</span></div>
-        <p class="hint">Tempo de silêncio que a Juliet espera depois da sua fala antes de processar o comando. Aumente se ela cortar frases longas. Diminua se ela demorar a responder.</p>
-        <input id="listenMs" type="range" min="1000" max="5000" step="250" value="2000" aria-label="Tempo de espera depois de falar" style="width:100%;accent-color:#36d9ff">
-        <div class="row" style="margin-top:12px">
-          <button id="calAmb" class="action" type="button">Medir ruído do ambiente</button>
-          <button id="calTest" class="action primary" type="button">Testar escuta</button>
-        </div>
-        <div class="meter" aria-hidden="true"><div id="meterFill" class="meter-fill"></div></div>
-        <p id="calStatus" class="hint" role="status"></p>
-      </section>
-
-      <section class="panel">
-        <div class="section-title">
-          <h2>Histórico com a Juliet</h2>
-          <button id="logClear" class="smallbtn" type="button">Limpar histórico</button>
-        </div>
-        <div id="logList" class="log-list"></div>
-      </section>
-
-      <section class="panel">
-        <div class="section-title">
-          <h2>Movimentações ao vivo</h2>
-          <button class="smallbtn" id="export">Exportar backup</button>
-        </div>
-        <div id="entries"><div class="empty">Ainda não há movimentações. Experimente falar com a Juliet.</div></div>
-        <div class="row" style="margin-top:12px"><button class="action" id="importBtn">Restaurar backup</button><input id="importFile" type="file" accept="application/json,.json" hidden><button class="action danger" id="clear">Apagar todos os dados</button></div>
-      </section>
-
-      <div class="foot">Os dados ficam neste navegador neste aparelho. Use “Exportar backup” antes de limpar os dados do navegador ou trocar de aparelho.</div>
-    </div>
-
+<section class="panel">
+  <div class="pill">NÚCLEO DE INTERAÇÃO</div>
+  <div class="orb"></div>
+  <div id="state">AGUARDANDO SEU COMANDO</div>
+  <div id="reply" aria-live="polite">
+    Olá! Sou a Juliet.IA. Ative a chamada por nome para começar.
   </div>
+
+  <div class="controls">
+    <button id="mic" title="Falar" aria-label="Falar">🎙️</button>
+    <button id="wake" class="primary">Ativar chamada “Juliet”</button>
+    <button id="stop">Parar voz</button>
+  </div>
+
+  <div class="inputrow">
+    <input id="message" placeholder="Digite uma mensagem..." autocomplete="off">
+    <button id="send" class="primary">Enviar</button>
+  </div>
+
+  <div class="info">
+    <strong>Como me chamar:</strong><br>
+    1. Toque em “Ativar chamada Juliet”.<br>
+    2. Permita o acesso ao microfone.<br>
+    3. Diga “Juliet” e espere minha resposta.<br>
+    4. Fale seu comando ou pergunta.<br><br>
+    A página precisa permanecer aberta. O reconhecimento de voz
+    depende do suporte do navegador e da conexão.
+  </div>
+</section>
+
+<footer>Juliet.IA • Você controla quando e como eu atuo.</footer>
 </main>
 
 <script>
 (() => {
-  const KEY = 'meuCFO_voice_v1'; // mantém os dados já salvos
-  const TYPES = ['entrada', 'despesa', 'investimento'];
-  const LABEL = { entrada: 'Entrada', despesa: 'Despesa', investimento: 'Investimento' };
-  const NICE = { salario: 'Salário', combustivel: 'Combustível', almoco: 'Almoço', farmacia: 'Farmácia', agua: 'Água' };
-  const KNOWN = ['gasolina','combustivel','almoco','mercado','supermercado','aluguel','conta de luz','agua','internet','transporte','farmacia','salario','freelance','investimento','parcela','lazer'];
-  const RING = 2 * Math.PI * 40; // circunferência do medidor
+  "use strict";
 
   const $ = id => document.getElementById(id);
-  const norm = t => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
-  const money = n => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0);
+  const Recognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
 
-  let data = [];
-  try {
-    data = JSON.parse(localStorage.getItem(KEY) || '[]');
-    if (!Array.isArray(data)) data = [];
-  } catch (e) { data = []; }
-
-  // Estado da conversa
-  let convo = false;     // modo conversa (escuta contínua com palavra de ativação)
-  let followUp = false;  // após uma resposta, aceita o próximo pedido sem repetir "Juliet"
-  let speaking = false;
-  let listening = false;
-  let gotResult = false;
-  let micOk = false;     // permissão de microfone já concedida nesta sessão
-  let current = null;    // fala atual, para ignorar eventos de falas canceladas
-
-  // Núcleo, rosto e botão mudam conforme o estado
-  function setState(s) {
-    $('stage').dataset.state = s;
-    $('mic').classList.toggle('listening', s === 'listening');
-  }
-
-  // Voz masculina em português, se o aparelho tiver uma instalada
-  const MALE_HINTS = /antonio|felipe|male|masculin|homem/i;
-  let voice = null;
-  function pickVoice() {
-    if (!('speechSynthesis' in window)) return null;
-    const all = speechSynthesis.getVoices();
-    const pt = all.filter(v => /^pt/i.test(v.lang));
-    const pref = pt.filter(v => /^pt[-_]BR/i.test(v.lang));
-    const pool = pref.length ? pref : pt;
-    voice = pool.find(v => MALE_HINTS.test(v.name)) || null;
-    $('sideVoice').textContent = voice ? voice.name : 'Padrão do aparelho';
-    return voice;
-  }
-  if ('speechSynthesis' in window) {
-    pickVoice();
-    speechSynthesis.onvoiceschanged = pickVoice;
-  }
-
-  const speak = text => {
-    $('status').textContent = text;
-    noteReply(text);
-    if (!('speechSynthesis' in window)) { setState('idle'); listenAgain(); return; }
-    speechSynthesis.cancel();
-    if (!voice) pickVoice();
-    const u = new SpeechSynthesisUtterance(text);
-    current = u;
-    u.lang = 'pt-BR';
-    u.voice = voice || null;
-    u.rate = 1;
-    // Sem voz masculina instalada, deixa a voz disponível mais grave
-    u.pitch = voice ? 1 : 0.8;
-    u.onstart = () => { if (current !== u) return; speaking = true; setState('speaking'); };
-    const done = () => {
-      if (current !== u) return;
-      speaking = false;
-      setState('idle');
-      listenAgain(); // no modo conversa, volta a ouvir logo após falar
-    };
-    u.onend = done;
-    u.onerror = done;
-    speechSynthesis.speak(u);
-  };
-
-  const save = () => {
-    try { localStorage.setItem(KEY, JSON.stringify(data)); return true; }
-    catch (e) { speak('Não consegui salvar. O armazenamento do navegador pode estar cheio.'); return false; }
-  };
-
-  const sameMonth = iso => {
-    const d = new Date(iso), now = new Date();
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  };
-
-  const sumBy = list => list.reduce((t, x) => {
-    if (x.type === 'entrada') t.income += x.amount;
-    else if (x.type === 'despesa') t.expenses += x.amount;
-    else if (x.type === 'investimento') t.investments += x.amount;
-    return t;
-  }, { income: 0, expenses: 0, investments: 0 });
-
-  const balanceOf = t => t.income - t.expenses - t.investments;
-
-  function updateGauge() {
-    const m = sumBy(data.filter(x => sameMonth(x.date)));
-    const val = $('gaugeVal');
-    if (m.income <= 0) {
-      val.setAttribute('stroke-dashoffset', RING);
-      val.classList.remove('over');
-      $('gaugePct').textContent = '0%';
-      $('gaugeText').textContent = 'Registre entradas deste mês para comparar com seus gastos.';
-      return;
-    }
-    const pct = m.expenses / m.income * 100;
-    const shown = Math.min(pct, 100);
-    val.setAttribute('stroke-dashoffset', RING * (1 - shown / 100));
-    val.classList.toggle('over', pct > 100);
-    $('gaugePct').textContent = Math.round(pct) + '%';
-    $('gaugeText').textContent = pct > 100
-      ? `Você gastou mais do que entrou este mês: ${money(m.expenses)} de ${money(m.income)}.`
-      : `Você gastou ${money(m.expenses)} de ${money(m.income)} que entraram este mês.`;
-  }
-
-  function render() {
-    const t = sumBy(data);
-    $('income').textContent = money(t.income);
-    $('expenses').textContent = money(t.expenses);
-    $('investments').textContent = money(t.investments);
-    $('balance').textContent = money(balanceOf(t));
-
-    $('sideMonth').textContent = money(balanceOf(sumBy(data.filter(x => sameMonth(x.date)))));
-    $('sideCount').textContent = String(data.length);
-    updateGauge();
-    renderYears();
-    renderCategories();
-    renderTasks();
-
-    const box = $('entries');
-    box.innerHTML = '';
-    if (!data.length) {
-      box.innerHTML = '<div class="empty">Ainda não há movimentações. Fale com a Juliet ou digite acima.</div>';
-      return;
-    }
-    data.slice().reverse().slice(0, 30).forEach(x => {
-      const row = document.createElement('div');
-      row.className = 'entry';
-
-      const left = document.createElement('div');
-      left.style.minWidth = '0';
-      const desc = document.createElement('div');
-      desc.className = 'desc';
-      desc.textContent = x.category;
-      const meta = document.createElement('div');
-      meta.className = 'meta';
-      meta.textContent = `${x.desc ? x.desc + ' • ' : ''}${LABEL[x.type]} • ${new Date(x.date).toLocaleDateString('pt-BR')}`;
-      left.append(desc, meta);
-
-      const right = document.createElement('div');
-      right.className = 'row';
-      const amt = document.createElement('div');
-      amt.className = 'amount ' + (x.type === 'entrada' ? 'positive' : 'negative');
-      amt.textContent = (x.type === 'entrada' ? '+ ' : '− ') + money(x.amount);
-      const del = document.createElement('button');
-      del.className = 'icon';
-      del.textContent = '×';
-      del.setAttribute('aria-label', 'Apagar esta movimentação');
-      del.dataset.confirm = 'Apagar?';
-      del.addEventListener('click', () => armClick(del, () => removeEntry(x.id)));
-      right.append(amt, del);
-
-      row.append(left, right);
-      box.append(row);
-    });
-  }
-
-  // Confirmação em dois toques, feita na própria página.
-  // (confirm() é bloqueado em alguns visualizadores, então o clique não fazia nada.)
-  function armClick(btn, action) {
-    if (btn.dataset.armed) {
-      clearTimeout(btn._timer);
-      btn.dataset.armed = '';
-      btn.textContent = btn.dataset.label;
-      action();
-      return;
-    }
-    btn.dataset.label = btn.textContent;
-    btn.dataset.armed = '1';
-    btn.textContent = btn.dataset.confirm || 'Confirmar?';
-    btn._timer = setTimeout(() => {
-      btn.dataset.armed = '';
-      btn.textContent = btn.dataset.label;
-    }, 4000);
-  }
-
-  function removeEntry(id) {
-    data = data.filter(x => x.id !== id);
-    if (save()) { render(); speak('Movimentação apagada.'); }
-  }
-
-  // Aceita "35", "35,90", "35.90", "R$ 1.200,50", "2449 reais"
-  function amountFrom(s) {
-    const m = s.match(/\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?/);
-    if (!m) return null;
-    let v = m[0];
-    v = /^\d{1,3}(\.\d{3})+/.test(v) ? v.replace(/\./g, '').replace(',', '.') : v.replace(',', '.');
-    const n = Number(v);
-    return Number.isFinite(n) && n > 0 ? n : null;
-  }
-
-  // Categorias operacionais. As palavras-chave são comparadas sem acento e como palavras inteiras.
-  const CATEGORIAS = {
-    despesa: {
-      'Alimentação': ['almoco','janta','jantar','mercado','supermercado','ifood','restaurante','lanche','padaria','cafe','comida','feira','hortifruti'],
-      'Transporte': ['gasolina','combustivel','uber','onibus','metro','estacionamento','pedagio','oficina','manutencao','moto','carro','passagem'],
-      'Moradia': ['aluguel','condominio','conta de luz','luz','agua','internet','iptu','gas de cozinha','botijao'],
-      'Saúde': ['farmacia','remedio','medico','consulta','plano de saude','academia','dentista','exame'],
-      'Lazer': ['cinema','bar','viagem','passeio','show','festa','jogo'],
-      'Educação': ['curso','livro','escola','faculdade'],
-      'Assinaturas': ['assinatura','netflix','spotify','streaming'],
-      'Compras': ['roupa','sapato','tenis','eletronico','presente','compra'],
-      'Trabalho': ['material','embalagem','equipamento','ferramenta','anuncio','marketing','hospedagem','dominio','taxa shopee'],
-      'Impostos e taxas': ['imposto','taxa','multa','das','mei','iss'],
-      'Dívidas': ['parcela','emprestimo','cartao','fatura','juros','divida']
-    },
-    entrada: {
-      'Salário': ['salario','holerite'],
-      'Serviços': ['servico','freelance','frete','entrega','corrida','bico','diaria'],
-      'Vendas': ['venda','vendi','shopee'],
-      'Rendimentos': ['rendimento','dividendo'],
-      'Reembolso': ['reembolso','devolucao','estorno']
-    },
-    investimento: {
-      'Renda fixa': ['tesouro','cdb','lci','lca','renda fixa'],
-      'Ações e fundos': ['acao','acoes','fundo','fii','etf'],
-      'Reserva': ['reserva','poupanca']
-    }
-  };
-
-  const hasKw = (s, kw) => new RegExp('\\b' + kw.replace(/\s+/g, '\\s+') + '\\b').test(s);
-
-  function categoryFrom(s, type) {
-    const table = CATEGORIAS[type] || CATEGORIAS.despesa;
-    for (const name of Object.keys(table)) {
-      if (table[name].some(kw => hasKw(s, kw))) return name;
-    }
-    return 'Outros';
-  }
-
-  const MESES = ['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-  const MESES_LABEL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-
-  function summarizeMonth(year, month) {
-    return sumBy(data.filter(x => {
-      const d = new Date(x.date);
-      return d.getFullYear() === year && d.getMonth() === month;
-    }));
-  }
-
-  function yearsWithData() {
-    const set = new Set([new Date().getFullYear(), ...data.map(x => new Date(x.date).getFullYear())]);
-    return [...set].sort((a, b) => b - a);
-  }
-
-  function yearRow(label, r, strong) {
-    const tr = document.createElement('tr');
-    if (strong) tr.className = 'total';
-    if (!strong && !r.income && !r.expenses && !r.investments) tr.classList.add('empty-month');
-    [label, money(r.income), money(r.expenses), money(balanceOf(r))].forEach((txt, i) => {
-      const td = document.createElement('td');
-      td.textContent = txt;
-      if (i === 1) td.className = 'positive';
-      if (i === 2) td.className = 'negative';
-      tr.appendChild(td);
-    });
-    return tr;
-  }
-
-  function renderYears() {
-    const sel = $('yearSel');
-    const years = yearsWithData();
-    const keep = Number(sel.value) || years[0];
-    sel.innerHTML = '';
-    years.forEach(y => {
-      const o = document.createElement('option');
-      o.value = y;
-      o.textContent = y;
-      sel.appendChild(o);
-    });
-    sel.value = years.includes(keep) ? keep : years[0];
-    const year = Number(sel.value);
-
-    const tbody = $('yearBody');
-    const tfoot = $('yearFoot');
-    tbody.innerHTML = '';
-    tfoot.innerHTML = '';
-    const total = { income: 0, expenses: 0, investments: 0 };
-    for (let m = 0; m < 12; m++) {
-      const r = summarizeMonth(year, m);
-      total.income += r.income;
-      total.expenses += r.expenses;
-      total.investments += r.investments;
-      tbody.appendChild(yearRow(MESES_LABEL[m], r, false));
-    }
-    tfoot.appendChild(yearRow('Total', total, true));
-  }
-
-  // Texto do resumo para enviar pelo WhatsApp
-  function yearText(year) {
-    const lines = ['Resumo ' + year + ' – Juliet'];
-    const total = { income: 0, expenses: 0, investments: 0 };
-    for (let m = 0; m < 12; m++) {
-      const r = summarizeMonth(year, m);
-      total.income += r.income;
-      total.expenses += r.expenses;
-      total.investments += r.investments;
-      lines.push(MESES_LABEL[m] + ': entradas ' + money(r.income) + ', saídas ' + money(r.expenses) + ', saldo ' + money(balanceOf(r)));
-    }
-    lines.push('Total: entradas ' + money(total.income) + ', saídas ' + money(total.expenses) + ', saldo ' + money(balanceOf(total)));
-    return lines.join('\n');
-  }
-
-  // ----- Tarefas, perfil e respostas locais -----
-  let tasks = [];
-  try {
-    const t = JSON.parse(localStorage.getItem('juliet_tasks') || '[]');
-    tasks = Array.isArray(t) ? t : [];
-  } catch (e) { tasks = []; }
-
-  let profile = '';
-  try { profile = localStorage.getItem('juliet_profile') || ''; } catch (e) { profile = ''; }
-
-  function saveTasks() {
-    try { localStorage.setItem('juliet_tasks', JSON.stringify(tasks)); } catch (e) { /* ignora */ }
-  }
-
-  function renderTasks() {
-    const box = $('taskList');
-    box.innerHTML = '';
-    const pend = tasks.filter(t => !t.done).length;
-    $('taskCount').textContent = pend + (pend === 1 ? ' pendente' : ' pendentes');
-    if (!tasks.length) {
-      box.innerHTML = '<div class="empty">Nenhuma tarefa. Diga “Juliet, lembra de…” ou digite acima.</div>';
-      return;
-    }
-    tasks.slice().sort((a, b) => Number(a.done) - Number(b.done)).forEach(t => {
-      const row = document.createElement('div');
-      row.className = 'task' + (t.done ? ' done' : '');
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = !!t.done;
-      cb.setAttribute('aria-label', 'Marcar como feita: ' + t.text);
-      cb.addEventListener('change', () => { t.done = cb.checked; saveTasks(); renderTasks(); });
-      const span = document.createElement('span');
-      span.textContent = t.text;
-      const del = document.createElement('button');
-      del.className = 'icon';
-      del.textContent = '×';
-      del.dataset.confirm = 'Apagar?';
-      del.setAttribute('aria-label', 'Apagar tarefa');
-      del.addEventListener('click', () => armClick(del, () => {
-        tasks = tasks.filter(x => x !== t);
-        saveTasks();
-        renderTasks();
-      }));
-      row.append(cb, span, del);
-      box.appendChild(row);
-    });
-  }
-
-  function addTask(text) {
-    const clean = text.trim().slice(0, 120);
-    if (!clean) { speak('O que devo lembrar?'); return; }
-    tasks.push({ text: clean, done: false, created: new Date().toISOString() });
-    saveTasks();
-    renderTasks();
-    speak('Tarefa anotada: ' + clean + '.');
-  }
-
-  function categoryTotals() {
-    const totals = {};
-    data.filter(x => x.type === 'despesa' && sameMonth(x.date)).forEach(x => {
-      totals[x.category] = (totals[x.category] || 0) + x.amount;
-    });
-    return Object.entries(totals).sort((a, b) => b[1] - a[1]);
-  }
-
-  function renderCategories() {
-    const box = $('catBars');
-    box.innerHTML = '';
-    const entries = categoryTotals();
-    if (!entries.length) {
-      box.innerHTML = '<div class="empty">Nenhuma despesa neste mês.</div>';
-      return;
-    }
-    const max = entries[0][1];
-    entries.forEach(([name, val]) => {
-      const row = document.createElement('div');
-      row.className = 'bar-row';
-      const label = document.createElement('div');
-      label.className = 'bar-label';
-      label.textContent = name;
-      const track = document.createElement('div');
-      track.className = 'bar-track';
-      const fill = document.createElement('div');
-      fill.className = 'bar-fill';
-      fill.style.width = (val / max * 100).toFixed(1) + '%';
-      track.appendChild(fill);
-      const amt = document.createElement('div');
-      amt.className = 'bar-val';
-      amt.textContent = money(val);
-      row.append(label, track, amt);
-      box.appendChild(row);
-    });
-  }
-
-  function fillCatSelect() {
-    const type = $('fType').value;
-    const sel = $('fCat');
-    const names = Object.keys(CATEGORIAS[type] || {}).concat('Outros');
-    sel.innerHTML = '';
-    names.forEach(name => {
-      const o = document.createElement('option');
-      o.value = name;
-      o.textContent = name;
-      sel.appendChild(o);
-    });
-  }
-
-  // Descrição do lançamento a partir do texto falado (sem valores e palavras de comando)
-  function descFrom(raw) {
-    return raw
-      .replace(/\d[\d.,]*/g, ' ')
-      .replace(/r\$/gi, ' ')
-      .replace(/\b(reais?|gastei|gastar|recebi|anota|anotar|investi|registra|registrar|de|com|no|na|do|da|dia|em|hoje|ontem|anteontem|amanha|janeiro|fevereiro|marco|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/gi, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 60);
-  }
-
-  // Respostas que a Juliet dá sozinha, com os dados do próprio aparelho
-  function askBrain(raw, s) {
-    const now = new Date();
-    if (/maior despesa|onde (eu )?gasto mais|mais gast/.test(s)) {
-      const top = categoryTotals();
-      speak(top.length
-        ? `Este mês, sua maior categoria de gasto é ${top[0][0]}, com ${money(top[0][1])}.`
-        : 'Ainda não há despesas neste mês.');
-      return;
-    }
-    if (/como estou|situacao|como (ta|esta) (o )?(meu|minhas) (dinheiro|financas|contas)/.test(s)) {
-      const m = summarizeMonth(now.getFullYear(), now.getMonth());
-      const top = categoryTotals()[0];
-      speak(`Este mês: entradas ${money(m.income)}, saídas ${money(m.expenses)}, saldo ${money(balanceOf(m))}.` + (top ? ` Maior gasto: ${top[0]}.` : ''));
-      return;
-    }
-    if (/que horas|que hora/.test(s)) {
-      speak('Agora são ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '.');
-      return;
-    }
-    if (/que dia|dia de hoje|data de hoje/.test(s)) {
-      speak('Hoje é ' + now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + '.');
-      return;
-    }
-    if (/sobre mim|quem sou|o que voce sabe/.test(s)) {
-      speak(profile ? profile.slice(0, 300) : 'Você ainda não escreveu nada na seção Sobre você.');
-      return;
-    }
-    speak('Ainda não sei responder isso. Posso registrar lançamentos, mostrar saldo, resumos, categorias e tarefas. Para conversas mais abertas, ainda não há um modelo de IA conectado.');
-  }
-
-  // ----- Perguntas pendentes e histórico de conversas -----
-  let pending = null;   // registro esperando resposta: { step: 'tipo' | 'categoria', ... }
-  let convoLog = [];
-  try {
-    const l = JSON.parse(localStorage.getItem('juliet_log') || '[]');
-    convoLog = Array.isArray(l) ? l : [];
-  } catch (e) { convoLog = []; }
-
-  function saveLog() {
-    try { localStorage.setItem('juliet_log', JSON.stringify(convoLog.slice(-300))); } catch (e) { /* ignora */ }
-  }
-
-  function logCmd(cmd) {
-    convoLog.push({ t: new Date().toISOString(), cmd, reply: '' });
-    if (convoLog.length > 300) convoLog.splice(0, convoLog.length - 300);
-    saveLog();
-    renderLog();
-  }
-
-  function noteReply(text) {
-    if (!convoLog.length) return;
-    const last = convoLog[convoLog.length - 1];
-    if (!last.reply) {
-      last.reply = text;
-      saveLog();
-      renderLog();
-    }
-  }
-
-  function renderLog() {
-    const box = $('logList');
-    if (!box) return;
-    box.innerHTML = '';
-    const items = convoLog.slice(-20).reverse();
-    if (!items.length) {
-      box.innerHTML = '<div class="empty">Ainda não há conversas registradas.</div>';
-      return;
-    }
-    items.forEach(it => {
-      const row = document.createElement('div');
-      row.className = 'log-item';
-      const time = document.createElement('div');
-      time.className = 'log-time';
-      time.textContent = new Date(it.t).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-      const cmd = document.createElement('div');
-      cmd.className = 'log-cmd';
-      cmd.textContent = 'Você: “' + it.cmd + '”';
-      const rep = document.createElement('div');
-      rep.className = 'log-reply';
-      rep.textContent = 'Juliet: ' + (it.reply || '…');
-      row.append(time, cmd, rep);
-      box.appendChild(row);
-    });
-  }
-
-  function finishEntry(e) {
-    data.push({
-      id: Date.now() + Math.random(),
-      type: e.type,
-      amount: e.amount,
-      category: e.category,
-      desc: e.desc || '',
-      date: (e.when || new Date()).toISOString()
-    });
-    pending = null;
-    if (save()) render();
-    const diaTxt = e.when ? ' em ' + e.when.toLocaleDateString('pt-BR') : '';
-    const verb = e.type === 'entrada' ? 'Entrada registrada' : e.type === 'investimento' ? 'Investimento registrado' : 'Despesa registrada';
-    speak(`${verb}${diaTxt}: ${money(e.amount)}, tipo ${e.category}. Saldo registrado agora: ${money(balanceOf(sumBy(data)))}.`);
-  }
-
-  // Resposta à pergunta pendente (tipo do registro ou categoria)
-  function answerPending(raw, s) {
-    $('transcript').textContent = 'Você respondeu: “' + raw + '”';
-    if (/^(cancela|cancelar|esquece|deixa pra la|para)\b/.test(s)) {
-      pending = null;
-      speak('Registro cancelado.');
-      return;
-    }
-    if (pending.step === 'tipo') {
-      const t = /entrada|receita|recebi/.test(s) ? 'entrada'
-        : /investi|investimento/.test(s) ? 'investimento'
-        : /saida|despesa|gasto|paguei/.test(s) ? 'despesa' : null;
-      if (!t) { speak('Não entendi. Diga entrada, saída ou investimento.'); return; }
-      pending.type = t;
-      const cat = categoryFrom(s, t);
-      if (t === 'entrada' || cat === 'Outros') {
-        pending.step = 'categoria';
-        speak('Qual o tipo de registro?');
-        return;
-      }
-      finishEntry({ ...pending, category: cat });
-      return;
-    }
-    // Categoria: a resposta vira o tipo do registro
-    const ans = raw.trim().replace(/[.!?]+$/, '').slice(0, 60);
-    if (!ans) { speak('Qual o tipo de registro?'); return; }
-    let category = categoryFrom(norm(ans), pending.type);
-    if (category === 'Outros') category = cap(ans);
-    finishEntry({ ...pending, category, desc: ans });
-  }
-
-  // Números por extenso antes de "reais": "trinta e cinco reais" vira "35 reais"
-  const NUMW = { zero:0, um:1, uma:1, dois:2, duas:2, tres:3, quatro:4, cinco:5, seis:6, sete:7, oito:8, nove:9,
-    dez:10, onze:11, doze:12, treze:13, catorze:14, quatorze:14, quinze:15, dezesseis:16, dezessete:17, dezoito:18,
-    dezenove:19, vinte:20, trinta:30, quarenta:40, cinquenta:50, sessenta:60, setenta:70, oitenta:80, noventa:90,
-    cem:100, cento:100, duzentos:200, duzentas:200, trezentos:300, trezentas:300, quatrocentos:400, quatrocentas:400,
-    quinhentos:500, quinhentas:500, seiscentos:600, seiscentas:600, setecentos:700, setecentas:700,
-    oitocentos:800, oitocentas:800, novecentos:900, novecentas:900 };
-  const isNumWord = w => Object.prototype.hasOwnProperty.call(NUMW, w) || w === 'mil';
-
-  function wordsToDigits(s) {
-    const toks = s.split(/\s+/);
-    const out = [];
-    let i = 0;
-    while (i < toks.length) {
-      if (isNumWord(toks[i])) {
-        let j = i;
-        const run = [];
-        while (j < toks.length && (isNumWord(toks[j]) || (toks[j] === 'e' && j + 1 < toks.length && isNumWord(toks[j + 1])))) {
-          run.push(toks[j]);
-          j++;
-        }
-        if (/^reais?$/.test(toks[j] || '')) {
-          let total = 0, chunk = 0;
-          run.forEach(w => {
-            if (w === 'mil') { total += (chunk || 1) * 1000; chunk = 0; }
-            else if (w !== 'e') chunk += NUMW[w];
-          });
-          out.push(String(total + chunk));
-          i = j;
-          continue;
-        }
-      }
-      out.push(toks[i]);
-      i++;
-    }
-    return out.join(' ');
-  }
-
-  // Calibração: mede o ruído do ambiente por 3 segundos
-  async function measureAmbient() {
-    if (!(await ensureMic())) return;
-    let stream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch (e) {
-      $('calStatus').textContent = 'Não consegui acessar o microfone.';
-      return;
-    }
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const an = ctx.createAnalyser();
-    an.fftSize = 2048;
-    ctx.createMediaStreamSource(stream).connect(an);
-    const buf = new Float32Array(an.fftSize);
-    let sum = 0, n = 0;
-    const start = performance.now();
-    $('calStatus').textContent = 'Fique em silêncio por 3 segundos…';
-    await new Promise(resolve => {
-      const tick = () => {
-        an.getFloatTimeDomainData(buf);
-        let acc = 0;
-        for (let k = 0; k < buf.length; k++) acc += buf[k] * buf[k];
-        const rms = Math.sqrt(acc / buf.length);
-        sum += rms;
-        n++;
-        $('meterFill').style.width = Math.min(100, rms * 400) + '%';
-        if (performance.now() - start < 3000) requestAnimationFrame(tick);
-        else resolve();
-      };
-      tick();
-    });
-    stream.getTracks().forEach(t => t.stop());
-    ctx.close();
-    $('meterFill').style.width = '0';
-
-    const avg = sum / Math.max(n, 1);
-    let msg;
-    if (avg < 0.01) {
-      msg = 'Ambiente silencioso. A espera atual está boa.';
-    } else if (avg < 0.03) {
-      msg = 'Ambiente com ruído moderado. Se ela cortar frases, aumente a espera.';
-    } else {
-      msg = 'Ambiente barulhento. Aumentei a espera para 3 segundos. Fale mais perto do aparelho.';
-      if (listenMs < 3000) setListenMs(3000);
-    }
-    $('calStatus').textContent = msg;
-  }
-
-  // Teste: a Juliet mostra e fala exatamente o que ouviu
-  function testListening() {
-    if (!recognition) {
-      $('calStatus').textContent = 'Este navegador não oferece reconhecimento de voz aqui.';
-      return;
-    }
-    testMode = true;
-    $('calStatus').textContent = 'Diga uma frase qualquer. Eu vou mostrar o que ouvi.';
-    startListening();
-  }
-
-  function setListenMs(v) {
-    listenMs = v;
-    $('listenMs').value = v;
-    $('listenVal').textContent = (v / 1000).toFixed(1).replace('.', ',') + ' s';
-    try { localStorage.setItem('juliet_listen_ms', String(v)); } catch (e) { /* ignora */ }
-  }
-
-  // ----- Datas faladas ou digitadas -----
-  // Aceita: hoje, ontem, anteontem, amanhã, "dia 10", "dia 10 de março", "dia 10 de março de 2026", "10/03" e "10/03/2026".
-  // Sem data, usa a data de hoje.
-  function validDate(y, mo, d) {
-    const dt = new Date(y, mo, d, 12, 0, 0);
-    return dt.getDate() === d ? dt : null;
-  }
-
-  function dateFrom(s) {
-    const now = new Date();
-    const base = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
-    const shift = n => { const d = new Date(base); d.setDate(d.getDate() + n); return d; };
-    if (/\banteontem\b/.test(s)) return shift(-2);
-    if (/\bontem\b/.test(s)) return shift(-1);
-    if (/\bhoje\b/.test(s)) return base;
-    if (/\bamanha\b/.test(s)) return shift(1);
-
-    let m = s.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
-    if (m) {
-      let y = m[3] ? Number(m[3]) : now.getFullYear();
-      if (y < 100) y += 2000;
-      return validDate(y, Number(m[2]) - 1, Number(m[1]));
-    }
-
-    m = s.match(/\bdia (\d{1,2})(?: de ([a-z]+))?(?: de (\d{4}))?\b/);
-    if (m) {
-      const day = Number(m[1]);
-      const mi = m[2] ? MESES.indexOf(m[2]) : -1;
-      const year = m[3] ? Number(m[3]) : now.getFullYear();
-      if (mi >= 0) return validDate(year, mi, day);
-      // Sem mês: usa o mês atual. Se o dia ainda não chegou, usa o mês anterior.
-      let d = validDate(year, now.getMonth(), day);
-      if (d && d > base) d = validDate(year, now.getMonth() - 1, day);
-      return d;
-    }
-    const mi = MESES.findIndex(name => new RegExp('\\b' + name + '\\b').test(s));
-    if (mi >= 0) return validDate(now.getFullYear(), mi, mi === now.getMonth() ? now.getDate() : 1);
-    return null;
-  }
-
-  // Tira datas do texto antes de procurar o valor, para "dia 10" não virar R$ 10
-  function stripDates(s) {
-    return s
-      .replace(/\bdia \d{1,2}(?: de [a-z]+)?(?: de \d{4})?\b/g, ' ')
-      .replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, ' ');
-  }
-
-  function handle(raw) {
-    const s = norm(raw).trim();
-    logCmd(raw);
-    if (pending) { answerPending(raw, s); return; }
-    $('transcript').textContent = 'Você disse: “' + raw + '”';
-
-    if (/^(oi|ola|bom dia|boa tarde|boa noite)\b/.test(s)) {
-      speak('Oi! Em que posso ajudar com suas finanças?');
-      return;
-    }
-    if (/o que voce faz|o que vc faz|ajuda|como funciona/.test(s)) {
-      speak('Eu registro gastos, entradas e investimentos, e respondo sobre seu saldo. Por exemplo: gastei 35 reais com gasolina.');
-      return;
-    }
-    if (/obrigad|valeu/.test(s)) {
-      speak('Por nada. Estou aqui quando precisar.');
-      return;
-    }
-
-    if (/\b(lembra de|lembrar de|me lembra de|me lembra|lembrete|tarefa)\b/.test(s)) {
-      const txt = raw.replace(/^.*?\b(me lembra de|me lembra|lembra de|lembrar de|lembrete de|lembrete|tarefa de|tarefa)\b\s*/i, '');
-      addTask(txt);
-      return;
-    }
-    if (/minhas tarefas|tarefas pendentes|o que tenho (pra|para) fazer/.test(s)) {
-      const p = tasks.filter(t => !t.done);
-      speak(p.length
-        ? `Você tem ${p.length} tarefa${p.length > 1 ? 's' : ''} pendente${p.length > 1 ? 's' : ''}: ` + p.slice(0, 3).map(t => t.text).join('; ') + '.'
-        : 'Você não tem tarefas pendentes.');
-      return;
-    }
-    if (/^(conclui|concluir|marca|marcar)\b/.test(s)) {
-      const alvo = norm(raw.replace(/^\S+\s*/, '')).replace(/\s+(como )?(feita|feito)$/, '').trim();
-      const t = tasks.find(x => !x.done && norm(x.text).includes(alvo));
-      if (t) { t.done = true; saveTasks(); renderTasks(); speak('Tarefa concluída: ' + t.text + '.'); }
-      else speak('Não encontrei essa tarefa.');
-      return;
-    }
-
-    const monthOnly = /\bmes\b/.test(s);
-    const scope = monthOnly ? data.filter(x => sameMonth(x.date)) : data;
-    const scopeLabel = monthOnly ? ' neste mês' : '';
-
-    if (/resumo|relatorio|balanco|entradas e saidas/.test(s)) {
-      const yr = s.match(/\b(20\d{2})\b/);
-      const year = yr ? Number(yr[1]) : new Date().getFullYear();
-      const mi = MESES.findIndex(name => new RegExp('\\b' + name + '\\b').test(s));
-      if (mi >= 0) {
-        const r = summarizeMonth(year, mi);
-        speak(`Em ${MESES_LABEL[mi]} de ${year}: entradas ${money(r.income)}, saídas ${money(r.expenses)}, saldo ${money(balanceOf(r))}.`);
-      } else {
-        const t = sumBy(data.filter(x => new Date(x.date).getFullYear() === year));
-        speak(`Em ${year}: entradas ${money(t.income)}, saídas ${money(t.expenses)}, saldo ${money(balanceOf(t))}.`);
-      }
-      return;
-    }
-
-    if (/saldo|quanto sobrou|quanto tenho|meu dinheiro/.test(s)) {
-      const t = sumBy(scope);
-      speak(`Seu saldo${scopeLabel} é ${money(balanceOf(t))}. Entradas: ${money(t.income)}. Despesas: ${money(t.expenses)}.`);
-      return;
-    }
-
-    if (/quanto gastei|total de despesa|minhas despesas/.test(s)) {
-      let list = scope.filter(x => x.type === 'despesa');
-      const m = s.match(/\bcom ([a-z ]+)/);
-      const cat = m ? m[1].split(/\s+(?:este|neste|no|do)?\s*mes\b/)[0].trim() : '';
-      if (cat) list = list.filter(x => norm(x.category).includes(cat));
-      const sum = list.reduce((a, x) => a + x.amount, 0);
-      speak(cat
-        ? `Você gastou ${money(sum)} com ${cat}${scopeLabel}.`
-        : `Você registrou ${money(sum)} em despesas${scopeLabel}.`);
-      return;
-    }
-
-    if (/quanto recebi|total de entrada|minhas entradas|quanto entrou/.test(s)) {
-      speak(`Você registrou ${money(sumBy(scope).income)} em entradas${scopeLabel}.`);
-      return;
-    }
-
-    const isQuestion = /\?$/.test(raw.trim()) || /^(quanto|qual|quais|como|quando|onde|por que|porque|o que|quem)\b/.test(s);
-    if (isQuestion && !/gastei|recebi|anota|investi|registr/.test(s)) {
-      askBrain(raw, s);
-      return;
-    }
-
-    const when = dateFrom(s);
-    const amount = amountFrom(stripDates(wordsToDigits(s)));
-    if (!amount) {
-      speak('Não consegui identificar o valor. Tente, por exemplo: gastei 35 reais com gasolina.');
-      return;
-    }
-
-    let type = null;
-    if (/recebi|salario|entrou|ganhei|entrada|renda/.test(s)) type = 'entrada';
-    else if (/investi|investimento|apliquei/.test(s)) type = 'investimento';
-    else if (/gastei|paguei|despesa|saida|gasto|compra|anota/.test(s)) type = 'despesa';
-
-    const desc0 = descFrom(raw);
-    if (!type) {
-      pending = { step: 'tipo', amount, when, desc: desc0 };
-      speak('É entrada, saída ou investimento?');
-      return;
-    }
-    const cat0 = categoryFrom(s, type);
-    if (type === 'entrada' || cat0 === 'Outros') {
-      pending = { step: 'categoria', type, amount, when, desc: desc0 };
-      speak('Qual o tipo de registro?');
-      return;
-    }
-    finishEntry({ type, amount, when, desc: desc0, category: cat0 });
-  }
-
-  // Pede permissão de microfone quando necessário. O navegador mostra a confirmação;
-  // a página não consegue liberá-la sozinha.
-  async function ensureMic() {
-    if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      speak('Este navegador não permite o microfone aqui. Abra o link publicado (https) no Chrome ou Safari atualizado.');
-      return false;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(t => t.stop()); // libera o microfone para o reconhecimento de voz
-      return true;
-    } catch (err) {
-      speak(err.name === 'NotAllowedError'
-        ? 'Permissão negada. Libere o microfone para este site nas configurações do navegador e tente de novo.'
-        : err.name === 'NotFoundError'
-          ? 'Nenhum microfone foi encontrado neste aparelho.'
-          : 'Não consegui acessar o microfone. Tente novamente.');
-      return false;
-    }
-  }
-
-  // Reconhecimento de voz
-  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   let recognition = null;
-  let buf = '';              // texto final acumulado desde que começou a ouvir
-  let silenceTimer = null;
-  let testMode = false;
-  let listenMs = 2000;       // silêncio até processar o comando (ajustado na calibração)
-  try {
-    const v = Number(localStorage.getItem('juliet_listen_ms'));
-    if (v >= 1000 && v <= 5000) listenMs = v;
-  } catch (e) { /* ignora */ }
-  // Aceita "Juliet", "Juliette", "Julieta" e "Julia" como nome de ativação
-  const WAKE_RE = /^\s*(?:(?:oi|ola|ei|hey)[,\s]+)?(?:juliet+e?|julieta|julia)\b[\s,.:!?]*/i;
+  let wakeMode = false;
+  let listening = false;
+  let waitingForCommand = false;
+  let restarting = false;
 
-  // Retorna true se o texto foi tratado; false se foi ignorado (modo conversa sem o nome)
-  function processUtterance(raw) {
-    raw = raw.trim();
-    if (!raw) return false;
-    if (testMode) {
-      testMode = false;
-      $('calStatus').textContent = 'Ouvi: “' + raw + '”';
-      speak('Ouvi: ' + raw);
-      return true;
+  function normalize(text) {
+    return String(text || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+  }
+
+  function state(text) {
+    $("state").textContent = text;
+  }
+
+  function speak(text) {
+    $("reply").textContent = text;
+
+    if (!("speechSynthesis" in window)) {
+      state("RESPOSTA EXIBIDA");
+      return;
     }
-    const m = raw.match(WAKE_RE);
-    if (convo && !followUp && !m) return false;
-    const cmd = m ? raw.replace(m[0], '').trim() : raw;
-    followUp = false;
-    if (!cmd) { followUp = convo; speak('Oi, pode falar.'); return true; }
-    handle(cmd);
-    followUp = convo;
-    return true;
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "pt-BR";
+    utterance.rate = 1;
+
+    utterance.onstart = () => state("JULIET FALANDO");
+
+    utterance.onend = () => {
+      state(wakeMode ? "AGUARDANDO JULIET" : "AGUARDANDO COMANDO");
+      if (wakeMode) restartListening();
+    };
+
+    utterance.onerror = () => {
+      if (wakeMode) restartListening();
+    };
+
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function restartListening() {
+    if (!wakeMode || !recognition || listening || restarting) return;
+
+    restarting = true;
+    setTimeout(() => {
+      restarting = false;
+      if (wakeMode && !listening) startListening();
+    }, 600);
+  }
+
+  function startListening() {
+    if (!recognition || listening) return;
+
+    try {
+      recognition.start();
+    } catch (error) {
+      // O navegador pode estar reiniciando o reconhecimento.
+    }
+  }
+
+  function processCommand(text) {
+    const command = String(text || "").trim();
+    if (!command) return;
+
+    $("message").value = "";
+    const normalized = normalize(command);
+
+    if (/^(oi|ola|bom dia|boa tarde|boa noite)$/.test(normalized)) {
+      speak("Olá! Estou pronta. O que você gostaria de fazer?");
+      return;
+    }
+
+    if (/^(pare|parar|cancele|cancelar|silencio|silenciar)$/.test(normalized)) {
+      window.speechSynthesis?.cancel();
+      speak("Tudo bem. Parei minha resposta.");
+      return;
+    }
+
+    speak(
+      "Recebi seu pedido: " + command +
+      ". A inteligência Gemini ainda não está conectada. " +
+      "Para responder perguntas gerais, será necessário configurar " +
+      "um backend seguro. Não executei nenhuma ação externa."
+    );
   }
 
   if (Recognition) {
     recognition = new Recognition();
-    recognition.lang = 'pt-BR';
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
+    recognition.lang = "pt-BR";
     recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
       listening = true;
-      gotResult = false;
-      buf = '';
-      setState('listening');
-      $('status').textContent = convo && !followUp ? 'Diga “Juliet” e o seu pedido' : 'Estou ouvindo… fale agora';
+      state(wakeMode ? "AGUARDANDO JULIET" : "OUVINDO");
+      $("reply").textContent = wakeMode
+        ? "Pode me chamar dizendo Juliet."
+        : "Estou ouvindo. Pode falar.";
     };
 
-    recognition.onresult = e => {
-      gotResult = true;
-      let interim = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const r = e.results[i];
-        if (r.isFinal) buf += r[0].transcript + ' ';
-        else interim += r[0].transcript;
+    recognition.onresult = event => {
+      const result = event.results[event.results.length - 1];
+      if (!result || !result.isFinal) return;
+
+      const transcript = result[0].transcript.trim();
+
+      if (!wakeMode) {
+        recognition.stop();
+        processCommand(transcript);
+        return;
       }
-      const shown = (buf + interim).trim();
-      if (shown) $('transcript').textContent = 'Ouvindo: “' + shown + '”';
-      // Espera o silêncio definido na calibração antes de processar o comando
-      clearTimeout(silenceTimer);
-      silenceTimer = setTimeout(() => { if (listening) recognition.stop(); }, listenMs);
+
+      if (waitingForCommand) {
+        waitingForCommand = false;
+        recognition.stop();
+        processCommand(transcript);
+        return;
+      }
+
+      const normalized = normalize(transcript);
+      const match = normalized.match(/\b(juliet|julieta)\b(.*)$/);
+
+      if (match) {
+        const command = (match[2] || "").trim();
+        recognition.stop();
+
+        if (command) {
+          processCommand(command);
+        } else {
+          waitingForCommand = true;
+          speak("Oi, estou ouvindo. Pode falar.");
+        }
+      }
     };
 
-    recognition.onerror = e => {
-      if (e.error === 'no-speech' || e.error === 'aborted') return;
-      if (e.error === 'not-allowed') { convo = false; micOk = false; setWake(); }
-      $('status').textContent = e.error === 'not-allowed'
-        ? 'Permissão do microfone negada. Libere o microfone para este site nas configurações do navegador.'
-        : 'Não consegui ouvir. Verifique sua conexão ou use o campo de texto.';
+    recognition.onerror = event => {
+      listening = false;
+
+      if (event.error === "not-allowed" ||
+          event.error === "service-not-allowed") {
+        wakeMode = false;
+        $("wake").textContent = "Ativar chamada “Juliet”";
+        state("MICROFONE SEM PERMISSÃO");
+        $("reply").textContent =
+          "Permita o uso do microfone nas configurações do navegador.";
+      } else if (wakeMode) {
+        restartListening();
+      } else {
+        state("AGUARDANDO COMANDO");
+        $("reply").textContent =
+          "Não consegui ouvir. Tente novamente.";
+      }
     };
 
     recognition.onend = () => {
-      clearTimeout(silenceTimer);
       listening = false;
-      const text = buf.trim();
-      buf = '';
-      if (!gotResult) followUp = false;
-      if (!speaking) setState('idle');
-      if (text && processUtterance(text)) return; // ao terminar de falar, speak() chama listenAgain()
-      if (testMode) { testMode = false; $('calStatus').textContent = 'Não ouvi nada. Tente de novo.'; }
-      listenAgain();
+      if (wakeMode) restartListening();
     };
   }
 
-  async function startListening() {
-    if (!recognition || listening || speaking) return;
-    if (!micOk) {
-      micOk = await ensureMic();
-      if (!micOk) { convo = false; setWake(); return; }
-    }
-    try { recognition.start(); }
-    catch (e) { /* já estava ouvindo */ }
-  }
-
-  function listenAgain() {
-    if ((!convo && !pending) || speaking || listening) return;
-    setTimeout(startListening, 350);
-  }
-
-  function setWake() {
-    const b = $('wake');
-    b.setAttribute('aria-pressed', String(convo));
-    b.textContent = convo ? 'Modo conversa: ligado' : 'Modo conversa: desligado';
-  }
-
-  $('mic').addEventListener('click', () => {
+  $("wake").addEventListener("click", () => {
     if (!recognition) {
-      speak('Este navegador não oferece reconhecimento de voz aqui. Use o campo de texto ou abra o site no Chrome atualizado.');
+      speak(
+        "Este navegador não oferece reconhecimento de voz. " +
+        "Tente usar o Chrome atualizado."
+      );
       return;
     }
-    if (convo) { // tocar no botão encerra o modo conversa
-      convo = false;
-      setWake();
-      if (listening) recognition.stop();
-      setState('idle');
-      return;
-    }
-    if (listening) { recognition.stop(); return; }
-    followUp = false;
-    startListening();
-  });
 
-  $('wake').addEventListener('click', () => {
-    if (!recognition) {
-      speak('Este navegador não oferece reconhecimento de voz aqui. Use o campo de texto ou abra o site no Chrome atualizado.');
-      return;
-    }
-    convo = !convo;
-    followUp = false;
-    setWake();
-    if (convo) {
-      speak('Modo conversa ativado. Diga Juliet antes de cada pedido.');
+    wakeMode = !wakeMode;
+    waitingForCommand = false;
+
+    $("wake").textContent = wakeMode
+      ? "Desativar chamada “Juliet”"
+      : "Ativar chamada “Juliet”";
+
+    if (wakeMode) {
+      state("ATIVANDO MICROFONE");
+      $("reply").textContent =
+        "Chamada ativada. Diga Juliet para me chamar.";
+      window.speechSynthesis?.cancel();
+      startListening();
     } else {
       if (listening) recognition.stop();
-      setState('idle');
-      speak('Modo conversa desligado.');
+      state("CHAMADA DESATIVADA");
+      $("reply").textContent = "Chamada por nome desativada.";
     }
   });
 
-  $('form').addEventListener('submit', e => {
-    e.preventDefault();
-    const v = $('typed').value.trim();
-    if (!v) return;
-    handle(v);
-    $('typed').value = '';
-  });
-
-  document.querySelectorAll('[data-say]').forEach(b => b.addEventListener('click', () => handle(b.dataset.say)));
-
-  $('export').addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'juliet-backup-' + new Date().toISOString().slice(0, 10) + '.json';
-    a.click();
-    URL.revokeObjectURL(a.href);
-    speak('Backup preparado para salvar.');
-  });
-
-  // Restaurar: 1) escolhe o arquivo  2) toque no botão para confirmar a substituição
-  let pendingImport = null;
-  $('importBtn').addEventListener('click', () => {
-    if (pendingImport) {
-      data = pendingImport;
-      pendingImport = null;
-      $('importBtn').textContent = 'Restaurar backup';
-      if (save()) { render(); speak('Backup restaurado.'); }
+  $("mic").addEventListener("click", () => {
+    if (!recognition) {
+      speak("Seu navegador não oferece reconhecimento de voz.");
       return;
     }
-    $('importFile').click();
-  });
-  $('importFile').addEventListener('change', async e => {
-    const f = e.target.files[0];
-    e.target.value = '';
-    if (!f) return;
-    try {
-      const parsed = JSON.parse(await f.text());
-      const valid = Array.isArray(parsed) && parsed.every(x => TYPES.includes(x.type) && Number(x.amount) > 0);
-      if (!valid) throw new Error('inválido');
-      pendingImport = parsed;
-      $('importBtn').textContent = 'Toque para substituir os dados';
-      speak(`Backup com ${parsed.length} movimentações pronto. Toque no botão para substituir os dados atuais.`);
-    } catch (err) {
-      speak('Esse arquivo não parece ser um backup válido da Juliet.');
+
+    if (wakeMode) {
+      $("reply").textContent =
+        "A chamada por nome já está ativada. Diga Juliet.";
+      return;
+    }
+
+    if (listening) {
+      recognition.stop();
+    } else {
+      startListening();
     }
   });
 
-  $('clear').dataset.confirm = 'Toque de novo para apagar';
-  $('clear').addEventListener('click', () => armClick($('clear'), () => {
-    data = [];
-    if (save()) { render(); speak('Dados apagados deste navegador.'); }
-  }));
+  $("send").addEventListener("click", () => {
+    processCommand($("message").value);
+  });
 
-  $('yearSel').addEventListener('change', renderYears);
-
-  $('fType').addEventListener('change', fillCatSelect);
-
-  $('entryForm').addEventListener('submit', e => {
-    e.preventDefault();
-    const amount = Math.round(Number($('fAmount').value) * 100) / 100;
-    if (!(amount > 0)) { speak('Informe um valor maior que zero.'); return; }
-    const type = $('fType').value;
-    const category = $('fCat').value || 'Outros';
-    const desc = $('fDesc').value.trim().slice(0, 60);
-    const d = $('fDate').value;
-    const date = d ? new Date(d + 'T12:00:00').toISOString() : new Date().toISOString();
-    data.push({ id: Date.now() + Math.random(), type, amount, category, desc, date });
-    if (save()) {
-      render();
-      speak(`${LABEL[type]} lançada: ${money(amount)} em ${category}.`);
+  $("message").addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+      processCommand($("message").value);
     }
-    $('fAmount').value = '';
-    $('fDesc').value = '';
   });
 
-  $('taskForm').addEventListener('submit', e => {
-    e.preventDefault();
-    const v = $('taskInput').value;
-    if (!v.trim()) return;
-    addTask(v);
-    $('taskInput').value = '';
+  $("stop").addEventListener("click", () => {
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+
+    waitingForCommand = false;
+
+    if (listening && recognition) recognition.stop();
+
+    state(wakeMode ? "AGUARDANDO JULIET" : "AGUARDANDO COMANDO");
+    $("reply").textContent = "Resposta por voz interrompida.";
   });
-
-  $('profileSave').addEventListener('click', () => {
-    profile = $('profileText').value.trim();
-    let ok = true;
-    try { localStorage.setItem('juliet_profile', profile); } catch (e) { ok = false; }
-    $('profileStatus').textContent = ok ? 'Salvo neste aparelho.' : 'Não consegui salvar neste navegador.';
-  });
-
-  $('profileText').value = profile;
-
-  $('logClear').dataset.confirm = 'Toque de novo para apagar';
-  $('logClear').addEventListener('click', () => armClick($('logClear'), () => {
-    convoLog = [];
-    saveLog();
-    renderLog();
-  }));
-  renderLog();
-
-  $('listenMs').value = listenMs;
-  $('listenVal').textContent = (listenMs / 1000).toFixed(1).replace('.', ',') + ' s';
-  $('listenMs').addEventListener('input', () => setListenMs(Number($('listenMs').value)));
-  $('calAmb').addEventListener('click', measureAmbient);
-  $('calTest').addEventListener('click', testListening);
-
-  const today = new Date();
-  $('fDate').value = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-  fillCatSelect();
-
-  // Saudação conforme a hora do dia (a fala automática costuma ser bloqueada pelo navegador)
-  const h = new Date().getHours();
-  const greet = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
-  $('status').textContent = `${greet}. Eu sou a Juliet. Toque no botão para falar.`;
-
-  render();
 })();
 </script>
 </body>
